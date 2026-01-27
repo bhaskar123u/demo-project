@@ -1,0 +1,719 @@
+## Spring-boot udemy course notes
+
+1. Spring boot is known for dependency injection. When we start a spring-boot project, beans are created in Application Context and stored for injections into classes later.
+2. AOP : Aspect Oriented Programming, is known for offloading the cross-cutting concerns such as logging, updating metrics etc. so that we can focus on writing main business logic.
+3. AOP key terms -> Aspect(File containing advice and pointcut), Advice(it is a method that does some task), Pointcut(tells where all this advice is applicable).
+4. Pointcut -> tells where advice should be applied. Types of point cuts :
+   - execution(for methods matching the pointcut expression) e.g., @Before("execution(public String com.bsharan.demo_project.components.User.init())"), wildcards can be used (*(exact 1 match) ..(0 or more match))
+   - within(matches all method within a class/package) e.g., @Before("within(com.bsharan.demo_project.components.User)") OR @Before("within(com.bsharan.demo_project.components..*)")
+   - @within(any class have a particular annotation) e.g., @Before("@within(org.springframework.stereotype.Component)")
+   - @annotation(matches any method that is annotated with given annotation) e.g., ("@annotation(org.springframework.web.bind.annotation.GetMapping)")
+   - args(matches any method with particular argument) e.g., @Before("args(String, int)") OR @Before("args(com.bsharan.demo_project.components.User, Long)")
+   - @args(matches any method with particular parameters and that parameter class is annotated with particular annotation)
+5. We can also combine multiple point cuts using &&, ||
+6. Named point cuts e.g., @Pointcut("execution(...)") public void customPointcutName(){ //empty method }. Now it can be used as @Before("customPointcutName").
+7. @Before, @After, @Around(it surrounds the method start and end).
+8. In case of @Around, we have to call the method explicitly, it can be done using joinPoint.proceed(). So the flow is -> PC expression matched for @Around, then advice starts executing until it reaches joinPoint.proceed()
+9. How AOP works :
+   - When spring application starts, it looks for all @Aspect classes
+   - Parse the pointcut and store in efficient data structure for effective lookup (PointcutParser.class)
+   - Look for @Component, @Service... annotation classes and for each class check for eligibility based on pointcut
+   - Creates a proxy and the proxy has code to execute advice (AbstractAutoProxyCreator.class, DefaultAopProxyFactory.class, ReflectiveMethodInvocation.class).
+10. @Transaction - works with ACID principles, underlying AOP. Can be applied at class level(automatically applied to all public methods) and method level.
+11. When we want ACID, we have to start DB operations in a transaction. BEGIN TRANSACTION, if all success then COMMIT else ROLLBACK. Now all of this we don't need to write, it is taken care under an AOP(TransactionAspectSupport.class). There is a joinPoint which actually invokes methods.
+12. Hierarchy of transaction managers -> <<TransactionManager>> ---extends--> <<PlatformTransactionManager(getTransaction, commit, rollback)>> ----> AbstractPlatformTransactionManager(default implementations) ----> DataSourceTransactionManager ----> JDBCTransactionManager(Local transactions), HibernateTransactionManager(Local transactions), JPATransactionManager(Local transactions), JTATransactionManager(Distributed transactions, supports 2PC)
+13. Transaction Management -> Declarative approach(@Transactional), Programmatic approach
+14. Declarative approach -> Based on underlying Datasource, spring-boot chooses a transaction manager itself. If we want to give our configs, it can be done as below
+```java
+import jakarta.transaction.Transactional;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
+
+import javax.sql.DataSource;
+
+@Configuration
+public class AppConfig {
+    @Bean
+    public DataSource dataSource() {
+        DriverManagerDataSource dataSource = new DriverManagerDataSource();
+        dataSource.setDriverClassName("org.h2.Driver");
+        dataSource.setUrl("jdbc:h2:mem:testdb");
+        dataSource.setUsername("root");
+        dataSource.setPassword("password");
+        return dataSource;
+    }
+
+    // if we don't provide any name, the method name is the bean name, here bean name is -> "userTransactionManager"
+    @Bean
+    public PlatformTransactionManager userTransactionManager(DataSource dataSource) {
+        return new DataSourceTransactionManager(dataSource);
+    }
+}
+
+// we can use this as below
+@Component
+public class UserDeclarative {
+    @Transactional(transactionManager = "userTransactionManager")
+    public void updateUserProgrammatic(){
+        // some DB operations
+    }
+}
+```
+15. Programmatic approach -> transaction management using code. Why do we need it in first place?
+```java
+import jakarta.transaction.Transactional;
+import org.springframework.stereotype.Component;
+
+@Component
+public class User {
+    @Transactional
+    public void fetchAadharCardForVerification(){
+        // 1. update DB
+        // 2. call external API
+        // 3. update DB
+    }
+    // issue in this code, if the external API is taking a lot of time, the DB would be locked until then under a transaction, this is a case of resource contention, solution -> programmatic transaction management in which we can control the flow i.e., where to begin, where to commit and rollback
+}
+```
+16. We can use the bean as below, there are another ways also, using TransactionTemplate
+
+```java
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+
+@Component
+public class UserProgrammatic {
+
+    PlatformTransactionManager userTransactionManager;
+
+    UserProgrammatic(PlatformTransactionManager userTransactionManager) {
+        this.userTransactionManager = userTransactionManager;
+    }
+
+    public void fetchAadharCardForVerification() {
+        DefaultTransactionDefinition defaultTransactionDefinition = new DefaultTransactionDefinition();
+        TransactionStatus transactionStatus = userTransactionManager.getTransaction(defaultTransactionDefinition);
+        try{
+            // 1. update DB
+            // 2. call external API
+            // 3. update DB
+            // only difference -> since we have userTransactionManager here, we can control where to commit and rollback and all.
+            userTransactionManager.commit(transactionStatus);
+        } catch(Exception e){
+            userTransactionManager.rollback(transactionStatus);
+        }
+    }
+}
+```
+17. Transaction Propagation -> used while creating transactions, useful if the transaction spans multiple services. Common types under declarative approach are :
+    - REQUIRED :
+      - if parent txn present, use it
+      - else create new
+    - REQUIRED_NEW :
+      - if parent txn present
+          - suspend it and create a new txn, once child txn is finished, resume the parent txn.
+      - else create new txn
+    - SUPPORTS :
+      - if parent txn present, use it 
+      - else execute without any transaction
+    - NOT_SUPPORTED : 
+      - if parent txn present, suspend it, execute method without txn, resume parent txn
+      - else execute without any transaction
+    - MANDATORY :
+      - if parent txn is present use it
+      - else throw exception
+    - NEVER :
+      - if parent txn is present, throw exception
+      - else execute without txn
+18. In Programmatic way, we can set the transaction propagation in the transaction definition and that can be passed along to other methods.
+```java
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
+
+@Component
+public class UserProgrammatic {
+
+    PlatformTransactionManager userTransactionManager;
+
+    UserProgrammatic(PlatformTransactionManager userTransactionManager) {
+        this.userTransactionManager = userTransactionManager;
+    }
+
+    public void fetchAadharCardForVerification() {
+        DefaultTransactionDefinition defaultTransactionDefinition = new DefaultTransactionDefinition();
+        defaultTransactionDefinition.setName("Testing propagation methods");
+        defaultTransactionDefinition.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
+        TransactionStatus transactionStatus = userTransactionManager.getTransaction(defaultTransactionDefinition);
+        try {
+            // 1. update DB
+            // 2. call external API
+            // 3. update DB
+            // only difference -> since we have userTransactionManager here, we can control where to commit and rollback and all.
+            userTransactionManager.commit(transactionStatus);
+        } catch (Exception e) {
+            userTransactionManager.rollback(transactionStatus);
+        }
+    }
+}
+```
+19. Isolation levels - It tells how changes made by one transaction are visible to other transaction running in parallel. Depending on DB, the default isolation level changes.
+```java
+import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
+
+@Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED)
+public void fetchAadharCardForVerification(){
+    // DB operations
+}
+```
+20. Springboot JPA
+```text
+                     ┌────────────────────────┐
+                     │    Application Logic   │
+                     └─────────────┬──────────┘
+                                   │
+                     ┌─────────────▼──────────────┐
+                     │ ORM Framework (JPA - API)  │
+                     │ e.g., Hibernate/OpenJPA    │
+                     └─────────────┬──────────────┘
+                                   │
+                     ┌─────────────▼──────────────┐
+                     │     JDBC (API Interface)   │
+                     └─────────────┬──────────────┘
+                                   │
+                     ┌─────────────▼─────────────────┐
+                     │ Database Driver (Actual Impl) │
+                     └─────────────┬─────────────────┘
+                                   │
+                     ┌─────────────▼──────────────┐
+                     │     Relational Database    │
+                     └────────────────────────────┘
+```
+21. Database Driver -> It is nothing but implementation of JDBC api(s). So assume we have a class as below defined in JDBC api.
+```java
+public Connection getConnection(){}
+```
+Now all the drivers Connector/J, PostgreSQL JDBC Driver, H2 Database Engine they implement these functions.
+22. JDBC without spring-boot
+```java
+import org.hibernate.annotations.processing.SQL;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+
+public class DatabaseConnection {
+    public Connection getConnection() {
+        try {
+            // load driver in JVM
+            Class.forName("org.h2.Driver");
+
+            // establish connection with DB
+            return DriverManager.getConnection("jdbc:h2:mem:userDB", "sa", "");
+        } catch (ClassNotFoundException | SQLException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+}
+
+public class UserDAO {
+
+    public void createUserTable() {
+        try {
+            Connection connection = new DatabaseConnection().getConnection();
+
+            String sql = "CREATE TABLE IF NOT EXISTS users (" +
+                    "id INT PRIMARY KEY AUTO_INCREMENT, " +
+                    "user_name VARCHAR(100), " +
+                    "age INT" +
+                    ");";
+
+            PreparedStatement preparedQuery = connection.prepareStatement(sql);
+            preparedQuery.executeUpdate();
+
+        } catch (SQLException e) {
+            // handle exception
+            e.printStackTrace();
+        } finally {
+            // close statement and DB connection
+        }
+    }
+
+    public void createUser(String userName, int userAge) {
+        try {
+            Connection connection = new DatabaseConnection().getConnection();
+
+            String insertQuery = "INSERT INTO users (user_name, age) VALUES (?, ?)";
+            PreparedStatement preparedQuery = connection.prepareStatement(insertQuery);
+            preparedQuery.setString(1, userName);
+            preparedQuery.setInt(2, userAge);
+
+            preparedQuery.executeUpdate();
+
+        } catch (SQLException e) {
+            // handle exception
+            e.printStackTrace();
+        } finally {
+            // close preparedQuery and connection
+        }
+    }
+
+    public void readUsers() {
+        try {
+            Connection connection = new DatabaseConnection().getConnection();
+
+            String selectQuery = "SELECT * FROM users";
+            PreparedStatement preparedQuery = connection.prepareStatement(selectQuery);
+
+            ResultSet resultSet = preparedQuery.executeQuery();
+
+            while (resultSet.next()) {
+                int userId = resultSet.getInt("id");
+                String name = resultSet.getString("user_name");
+                int age = resultSet.getInt("age");
+
+                System.out.println(userId + " " + name + " " + age);
+            }
+
+        } catch (SQLException e) {
+            // handle exception
+            e.printStackTrace();
+        } finally {
+            // close resultSet, preparedQuery and connection
+        }
+    }
+}
+```
+Problem with this approach is a lot of boilerplate code is written again and again such as :
+  - Driver class loading
+  - Establish connection
+  - Exception Handling
+  - Closing of DB connection and other objects to prevent memory leaks
+  - Manual handling of connection pool
+23. JDBC with spring-boot -> Spring-boot provides JDBCTemplate class which helps to remove all boilerplate code.
+
+```java
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
+
+public class User {
+    long userId;
+    String userName;
+    int age;
+    // constructors + getters + setters + others
+}
+
+@Repository
+public class UserRepository {
+
+    @Autowired
+    JdbcTemplate jdbcTemplate;
+
+    public void createTable() {
+        String sql = "CREATE TABLE users (user_id INT AUTO_INCREMENT PRIMARY KEY, " +
+                "user_name VARCHAR(100), age INT);";
+        jdbcTemplate.execute(sql);
+    }
+
+    public void insertUser(String name, int age) {
+        String insertQuery = "INSERT INTO users (user_name, age) VALUES (?, ?);";
+        jdbcTemplate.update(insertQuery, name, age);
+    }
+
+    public List<User> getUsers() {
+        String selectQuery = "SELECT * FROM users;";
+        return jdbcTemplate.query(selectQuery, (rs, rowNum) -> {
+            User user = new User();
+            user.setUserId(rs.getInt("user_id"));
+            user.setUserName(rs.getString("user_name"));
+            user.setAge(rs.getInt("age"));
+            return user;
+        });
+    }
+}
+
+@Component
+public class UserService {
+
+    @Autowired
+    UserRepository userRepository;
+
+    public void createTable() {
+        userRepository.createTable();
+    }
+
+    public void insertUser(String userName, int age) {
+        userRepository.insertUser(userName, age);
+    }
+
+    public List<User> getUsers() {
+        List<User> users = userRepository.getUsers();
+        for (User user : users) {
+            System.out.println(
+                    user.getUserId() + " : " +
+                            user.getUserName() + " : " +
+                            user.getAge()
+            );
+        }
+        return users;
+    }
+}
+```
+All connection details can be present in application.properties
+```application.properties
+spring.datasource.url=jdbc:h2:file:./data/testdb
+spring.datasource.driverClassName=org.h2.Driver
+spring.datasource.username=sa
+spring.datasource.password=
+spring.h2.console.enabled=true
+spring.h2.console.path=/h2-console
+spring.jpa.hibernate.ddl-auto=update
+```
+JdbcTemplate takes care of all connection establishing, running insert and read query, closing DB connections etc. It throws granular level of exceptions for better debugging. Default HikariDataSource is used and it provides inbuilt HikariCP. If we want to use some different datasource, it can be used in a Config class.
+24. Why ORM? ORM allows us to work with objects. Acts as bridge between java objects and database tables. With JDBC we still have
+    - manual object mapping(resultset -> objects) : ORM -> @Entity, @Column
+    - manual join handling : ORM -> @JoinColumn, @OneToMany, @ManyToOne
+    - no notion of object graph/domain model
+    - no change tracking
+    - no caching : ORM -> @Cacheable
+    - no inheritance mapping : ORM -> @Inheritance
+25. To use JPA -> add jpa-starter dependency in pom, then create entities, create repositories, create service and controllers. Below is the internal architecture of JPA ![JPA Architecture](images/JPA-Architecture.png)
+The persistence unit stores DB configs (driver, URL, username, password, dialect, etc.) and entity mapping info. Using that, an EntityManagerFactory is created, which in turn produces EntityManagers(EM) for that data source. Whenever we need to interact with DB for CRUD operation, we need EM. Each EM creates it's persistence context. This persistence context holds actual entities and helps in first level caching. In repository, we call find(), findAll() methods, which internally calls EM methods. Below is the complete flow
+```text
+         findById(1)
+            → Repository Proxy -> Implementation class for @Repository marked interfaces.
+                          It has implementations for all methods. It has pointer to correct EM which is created by Dispatcher Servlet during HTTP request interception.
+            → <<EntityManager>> -> entityManager.find(User.class, 1)
+            → Hibernate Session(implementation for EM methods) -> HibernateSession.find()
+            → Persistence Context (check 1st-level cache, if data is present, return it)
+            → generate JPQL/HQL (if using method-derived or JPQL query)
+            → JPQL/HQL → SQL AST → Dialect → Vendor SQL
+                    (Dialect adapts SQL to vendor e.g. MySQL, Postgres, Oracle)
+            → JDBC API -> PreparedStatement ps = connection.prepareStatement(sql);
+                          ps.setLong(1, 1)
+                          ResultSet rs = ps.executeQuery()
+            → JDBC Driver -> converts executeQuery() to vendor wire protocol (MySQL, Postgres, Oracle)
+            → Database
+            ← ResultSet
+            ← map to Entity -> User(id=1, name="Bhaskar Sharan")
+            ← return entity
+```
+For all the @Repository, spring-boot created proxies. Spring Data uses proxies so that interfaces without implementations can have working persistence logic, transaction wrapping, query derivation, and AOP functionality without requiring boilerplate code. Proxies are generated once at application startup and registered as beans. This is the reason we never have to provide implementation classes for @Repository. Between Hibernate and JDBC, there is a Dialect which helps them talk to each other.
+26. Persistence Unit -> Logical grouping of all entity who shares same config(means who all are stored in same DB). If we are not using spring-boot we would create a persistence.xml file which holds all config related information. If we have 1 DB, we can use application.properties. ![Persistence.xml](images/Persistence-Unit.png)
+27. With each PU, spring-boot creates one EntityManagerFactory and one TransactionManager.
+```text
++------+   +------+   +------+   +----------+
+| PU1  | → | EMF1 | → | TM1  | → |   H2 DB  |
++------+   +------+   +------+   +----------+
+
++------+   +------+   +------+   +-----------+
+| PU2  | → | EMF2 | → | TM2  | → | MySQL DB  |
++------+   +------+   +------+   +-----------+
+```
+But in case of distributed transactions, only one TM is created
+```text
++------+   +------+         +------------------+
+| PU1  | → | EMF1 | ------->|                  |
++------+   +------+         |                  |
+                            |   TM (JTA/XA)    | --→ H2 DB, MYSQL DB
++------+   +------+         |                  |
+| PU2  | → | EMF2 | ------->|                  |
++------+   +------+         +------------------+
+```
+JTA transaction manager does 2PC. Manages transactions across multiple DBs. All of these happens during application startup.
+28. Entity Life Cycle. It is managed in PC. When we issue a command such as save() or delete(), at first it is stored in managed persistence. At some point when commit(flush()) command is issued then only the entities gets save in DB.  ![Entity-Lifecycle](images/Entity-Lifecycle.png)
+29. Entity Manager Factory -> It does expensive boot-time work:
+    - scans all entities (@Entity classes)
+    - builds ORM metadata (mapping, annotations, table info, joins…)
+    - builds metamodel
+    - initializes caches
+    - validates DDL mapping (optional)
+    - sets up connection pools (via DataSource)
+    - initializes Hibernate SessionFactory
+    - initializes dialect
+    - initializes batch settings, query parser, 2nd level cache providers
+    
+If we try to create EM directly, for each request we would be scanning all entity, dialect init, cache init. It would take a lot of time. EMF amortizes heavy bootstrap costs to application startup once and lets you create cheap EM instances on demand. EM are then created per request/transaction and are lightweight units of work. They are not partitioned by entity type; each EM can manage all entities defined in the persistence unit. This work may take hundreds of milliseconds to seconds for large models. We inject repositories instead of EMF because repositories provide a clean domain-level data access abstraction. EMF and EM are low-level persistence APIs designed for bootstrapping and unit-of-work management. Repositories add higher-level capabilities such as query derivation, pagination, projections, exception translation, transaction integration, and testability, which would make the service layer complex and tightly coupled to persistence if we used EMF directly.
+```text
+                                                            200 entities
+                                                                 ↓
+                                                                1 PU
+                                                                 ↓
+                                                               1 EMF
+                                                                 ↓
+                                            [Request 1] → EM1 → can manage all 200 entities
+                                            [Request 2] → EM2 → can manage all 200 entities
+                                            [Request 3] → EM3 → can manage all 200 entities
+```
+EntityManager represents :
+  - a persistence context
+  - a unit of work
+  - connected to a transaction boundary
+
+It manages :
+  - 1st level cache
+  - dirty checking
+  - flush/commit
+  - lifecycle of entities (managed/detached)
+  - lazy loading proxies
+
+And it is created per :
+  - request
+  - transaction
+  - manually
+
+Code comparison
+```java
+@Autowired
+EntityManagerFactory emf;
+
+public User getUser(Long id) {
+    EntityManager em = emf.createEntityManager();
+    em.getTransaction().begin();
+    User user = em.find(User.class, id);
+    em.getTransaction().commit();
+    em.close();
+    return user;
+}/*
+Every operation requires:
+    - transaction start/commit
+    - Try/Catch rollback
+    - EM closing
+    - Exception translation
+    - Flush handling
+    - Mapping logic
+This becomes unmaintainable in a big system. */
+// Using Repository
+@Service
+public class UserService {
+    @Autowired UserRepository userRepo;
+
+    public User getUser(Long id) {
+        return userRepo.findById(id).orElseThrow(Exception);
+    }
+}/*
+Plus you get:
+    - Transactions managed automatically
+    - Queries abstracted
+    - EM lifecycle hidden
+    - Exception translation handled
+    - Pagination and projections
+    - Query derivation
+    - Testability
+ */
+```
+30. First Level Caching - Done at persistence context layer. Can be seen in cases when we save the user and then fetches it again. Not in all cases we immediately write to DB, in that case whatever we save/update/read is served from PC only i.e., Level 1 cache. Internally hashmap is used for keeping data in PC.
+31. Second Level Caching (L2 caching) ![Second-Level-Caching](images/Second-Level-Caching.png)
+32. To use this, we have to add dependency in pom.xml(ehcache, hibernate-jcache, cache-api), enable it via application.properties and then in entity like below
+```application.properties
+spring.jpa.properties.hibernate.cache.use_second_level_cache=true
+spring.jpa.properties.hibernate.cache.region.factory_class=org.hibernate.cache.jcache.JCacheRegionFactory
+spring.jpa.properties.javax.cache.provider=org.ehcache.jsr107.EhcacheCachingProvider
+logging.level.org.hibernate.cache.spi=DEBUG
+```
+```java
+import jakarta.persistence.Entity;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+
+@Entity
+@Cache(usage = CacheConcurrencyStrategy.READ_WRITE, region = "userDetailsCache")
+public class UserDetails { }
+```
+- ehcache -> provides core implementation for second level caching
+- hibernate-jcache -> hibernate specific caching logic, like when we use @Cache and CacheConcurrencyStrategy, so specific logic needs to be executed
+- cache-api -> provides interface for Jcache, hibernate interact with these APIs.
+```text
+                                                             Hibernate
+                                                                 ↓
+                                                          Hibernate JCache
+                                                                 ↓
+                                                        JCache api interfaces (exposes all APIs)
+                                                        ↓         ↓         ↓
+                                                      Ehcache  Caffeine  Hazelcast (API implementations)
+```
+33. Region -> Helps in logical grouping of cached data, provide granular level management of cached data. Each region can have different config for :
+    - Eviction policy (LIFO/FIFO etc.)
+    - TTL
+    - Cache size
+    - Concurrency strategy
+
+All these information can be put into ehcache.xml ![ehcache](images/ehcache.png)
+34. CacheConcurrencyStrategy guides how operations like insert/update/delete impact the cache data. Types of concurrency strategies :
+    - CacheConcurrencyStrategy.READ_ONLY (good for static data which is never updated)
+    - CacheConcurrencyStrategy.READ_WRITE (shared lock during read, exclusive lock during write, updates cache at the same time)
+    - CacheConcurrencyStrategy.NONSTRICT_READ_WRITE (No lock during read, for write it put a lock, update DB, if txn is successful then it invalidates tha cache, release the lock, most suited for Read heavy systems, might serve stale data)
+    - CacheConcurrencyStrategy.TRANSACTIONAL (acquire both read and write lock, updates cache after successful commit, any read during lock goes to DB, any write waits in queue)
+
+CacheConcurrencyStrategy.READ_WRITE
+
+![CacheConcurrencyStrategy.READ_WRITE](images/CacheConcurrency-READ-WRITE.png)
+35. JPA Annotations
+    - @Table
+    - @Column
+    - @Id -> for PK
+    - @Embeddable, @EmbeddedId -> for composite key
+    - @IdClass -> for composite key
+    - @GeneratedValue
+    - @SequenceGenerator -> it can pregenerate some N values and is cached at hibernate end, no DB call, directly next value can be fetched and used.
+```java
+import jakarta.persistence.*;
+
+import java.io.Serializable;
+@Table(name = "User",
+        schema = "Onboarding",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"name" / "email"}) // composite key constraints, both combined they should be unique
+        },
+        indexes = {
+                @Index(name = "index_email", columnList = "email") // index on single column, we can also have composite index
+        })
+@Entity
+public class User {
+    @Id // unique, non-null, primary-key, applicable for single column
+    // @GeneratedValue(strategy = GenerationType.IDENTITY) // auto-increment, applicable for single column, IDENTITY is DB specific, we can use sequence instead
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "unique_user_seq")
+    @SequenceGenerator(name = "unique_user_seq", sequenceName = "db_seq_name", initialValue = 100, allocationSize = 5) // when this will start, db will fetch 5 values from db_seq_name and will store in hibernate, only when the 6th entry is made next set of sequence are fetched. Sequence is an atomic counter, no table is involved.
+    private long id;
+    @Column(name = "email", unique = true, nullable = false, length = 255)
+    private String email;
+    private String firstName;
+    private String lastName;
+}
+// for composite key, we can use annotations as below
+public class ProductDetailsCK implements Serializable {
+    private long id;
+    private String name;
+
+    public ProductDetailsCK() {}
+
+    @Override
+    public int hashCode() {
+        // self implementation
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        // self implementation
+    }
+}
+// Approach 1 -> Product table has composite key
+@Entity
+@IdClass(ProductDetailsCK.class)
+public class Product {
+    @Id
+    private long id;
+    @Id
+    private String productName;
+    private String makerName;
+}
+
+// Approach 2 -> mark ProductDetailsCK as @Embeddable then
+@Entity
+@IdClass(ProductDetailsCK.class)
+public class Product {
+    
+    @EmbeddedId
+    private ProductDetailsCK productDetailsCK;
+    private String makerName;
+}
+```
+36. Entity Mapping -> We have several entity in our application and sometimes there exist some relationship between them. These relationship is hold at database layer e.g., one upi id can be linked to one bank only. OneToOne or OneToMany are few examples of such relationship. Apart from this, we should also make sure that how these entity exist, any update in parent entity must also cascade to child entity. Without cascade type any operation on parent do not affect child entities. All of these are managed by annotations in data JPA. OneToOne mapping looks like below :
+```java
+import jakarta.persistence.*;
+
+@Entity
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long id;
+    @OneToOne(cascade = CascadeType.ALL)
+    private PassportDetails passportDetails;
+    private String email;
+}
+@Entity
+public class PassportDetails {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long id;
+    private String email;
+    private String authorisedTo;
+    private String issuerCountry;
+    private Date issuedOn;
+    private Date validTill;
+}
+```
+What happens internally, in the table User, it creates a foreign key which is PK of another table. How internally table will look like is User --> {id,passport_details_id(FK),email} and PassportDetails --> {id, email, authorisedTo, issuerCountry, issuedOn, validTill}. But if we need more control, we can use @JoinColumn.
+
+```java
+import jakarta.persistence.JoinColumn;
+
+@Entity
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long id;
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "passport_id", referencedColumnName = "id")
+    private PassportDetails passportDetails;
+}
+```
+In this case the table for user will look like User --> {id,passport_id(FK)}. In case of composite key, we need to map all columns as shown below :
+```java
+import jakarta.persistence.Embeddable;
+import jakarta.persistence.EmbeddedId;
+import jakarta.persistence.JoinColumn;
+
+@Embeddable
+public class PassportDetailsCK implements Serializable {
+    private long id;
+    private String email;
+    private String authorisedTo;
+
+    public ProductDetailsCK() {
+    }
+
+    @Override
+    public int hashCode() {
+        // self implementation
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        // self implementation
+    }
+}
+@Entity
+public class PassportDetails {
+    @EmbeddedId
+    private PassportDetailsCK passportDetailsCK;
+    private String issuerCountry;
+    private Date issuedOn;
+    private Date validTill;
+}
+@Entity
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long id;
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumns({
+            @JoinColumn(name = "passport_id", referencedColumnName = "id"), // these are all FK in User table
+            @JoinColumn(name = "passport_email", referencedColumnName = "email"),
+            @JoinColumn(name = "passport_authorisedTo", referencedColumnName = "authorisedTo")
+    })
+    private PassportDetails passportDetails;
+}
+```
+In this case the table for user will look like User --> {id,passport_id(FK),passport_email(FK),passport_authorisedTo(FK)}.
+37. Cascade types :
+    - CascadeType.PERSIST : Inserting parent automatically insert the child entities.

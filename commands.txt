@@ -1,0 +1,6 @@
+- lsof -i :8080
+- kill -9 <PID>
+- mvn clean install
+- mvn spring-boot:run
+- mvn clean package -DskipTests
+- mysql -h 127.0.0.1 P 3306 -u bsharan -p        password: @GH72DBUW^@@&#NSsajzJI#$

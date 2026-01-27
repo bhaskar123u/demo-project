@@ -1,0 +1,238 @@
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::       (v4.0.2-SNAPSHOT)
+
+2026-01-24T13:24:17.718+05:30  INFO 8353 --- [demo-project] [           main] c.b.demo_project.DemoProjectApplication  : Starting DemoProjectApplication using Java 21.0.9 with PID 8353 (/Users/bhaskarsharan/Desktop/code/springboot/demo-project/target/classes started by bhaskarsharan in /Users/bhaskarsharan/Desktop/code/springboot/demo-project)
+2026-01-24T13:24:17.719+05:30  INFO 8353 --- [demo-project] [           main] c.b.demo_project.DemoProjectApplication  : No active profile set, falling back to 1 default profile: "default"
+2026-01-24T13:24:17.903+05:30  INFO 8353 --- [demo-project] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-01-24T13:24:17.910+05:30  INFO 8353 --- [demo-project] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 4 ms. Found 0 JPA repository interfaces.
+[BEAN INIT] org.springframework.boot.context.properties.BoundConfigurationProperties -> org.springframework.boot.context.properties.BoundConfigurationProperties
+[BEAN INIT] server.tomcat-org.springframework.boot.tomcat.autoconfigure.TomcatServerProperties -> org.springframework.boot.tomcat.autoconfigure.TomcatServerProperties
+[BEAN INIT] org.springframework.boot.tomcat.autoconfigure.servlet.TomcatServletWebServerAutoConfiguration -> org.springframework.boot.tomcat.autoconfigure.servlet.TomcatServletWebServerAutoConfiguration
+[BEAN INIT] tomcatServletWebServerFactory -> org.springframework.boot.tomcat.servlet.TomcatServletWebServerFactory
+[BEAN INIT] org.springframework.boot.web.server.autoconfigure.servlet.ServletWebServerConfiguration -> org.springframework.boot.web.server.autoconfigure.servlet.ServletWebServerConfiguration
+[BEAN INIT] server-org.springframework.boot.web.server.autoconfigure.ServerProperties -> org.springframework.boot.web.server.autoconfigure.ServerProperties
+[BEAN INIT] spring.ssl-org.springframework.boot.autoconfigure.ssl.SslProperties -> org.springframework.boot.autoconfigure.ssl.SslProperties
+[BEAN INIT] org.springframework.boot.autoconfigure.ssl.SslAutoConfiguration -> org.springframework.boot.autoconfigure.ssl.SslAutoConfiguration
+[BEAN INIT] fileWatcher -> org.springframework.boot.autoconfigure.ssl.FileWatcher
+[BEAN INIT] sslPropertiesSslBundleRegistrar -> org.springframework.boot.autoconfigure.ssl.SslPropertiesBundleRegistrar
+[BEAN INIT] sslBundleRegistry -> org.springframework.boot.ssl.DefaultSslBundleRegistry
+[BEAN INIT] servletWebServerFactoryCustomizer -> org.springframework.boot.web.server.autoconfigure.servlet.ServletWebServerFactoryCustomizer
+[BEAN INIT] org.springframework.boot.tomcat.autoconfigure.TomcatWebServerConfiguration$TomcatWebSocketConfiguration -> org.springframework.boot.tomcat.autoconfigure.TomcatWebServerConfiguration$TomcatWebSocketConfiguration
+[BEAN INIT] webSocketWebServerCustomizer -> org.springframework.boot.tomcat.autoconfigure.WebSocketTomcatWebServerFactoryCustomizer
+[BEAN INIT] org.springframework.boot.tomcat.autoconfigure.TomcatWebServerConfiguration -> org.springframework.boot.tomcat.autoconfigure.TomcatWebServerConfiguration
+[BEAN INIT] spring.web-org.springframework.boot.autoconfigure.web.WebProperties -> org.springframework.boot.autoconfigure.web.WebProperties
+[BEAN INIT] tomcatWebServerFactoryCustomizer -> org.springframework.boot.tomcat.autoconfigure.TomcatWebServerFactoryCustomizer
+[BEAN INIT] tomcatServletWebServerFactoryCustomizer -> org.springframework.boot.tomcat.autoconfigure.servlet.TomcatServletWebServerFactoryCustomizer
+[BEAN INIT] org.springframework.boot.webmvc.autoconfigure.error.ErrorMvcAutoConfiguration -> org.springframework.boot.webmvc.autoconfigure.error.ErrorMvcAutoConfiguration
+[BEAN INIT] org.springframework.boot.webmvc.autoconfigure.DispatcherServletAutoConfiguration$DispatcherServletRegistrationConfiguration -> org.springframework.boot.webmvc.autoconfigure.DispatcherServletAutoConfiguration$DispatcherServletRegistrationConfiguration
+[BEAN INIT] org.springframework.boot.webmvc.autoconfigure.DispatcherServletAutoConfiguration$DispatcherServletConfiguration -> org.springframework.boot.webmvc.autoconfigure.DispatcherServletAutoConfiguration$DispatcherServletConfiguration
+[BEAN INIT] spring.mvc-org.springframework.boot.webmvc.autoconfigure.WebMvcProperties -> org.springframework.boot.webmvc.autoconfigure.WebMvcProperties
+[BEAN INIT] dispatcherServlet -> org.springframework.web.servlet.DispatcherServlet
+[BEAN INIT] spring.servlet.multipart-org.springframework.boot.servlet.autoconfigure.MultipartProperties -> org.springframework.boot.servlet.autoconfigure.MultipartProperties
+[BEAN INIT] org.springframework.boot.servlet.autoconfigure.MultipartAutoConfiguration -> org.springframework.boot.servlet.autoconfigure.MultipartAutoConfiguration
+[BEAN INIT] multipartConfigElement -> jakarta.servlet.MultipartConfigElement
+[BEAN INIT] dispatcherServletRegistration -> org.springframework.boot.webmvc.autoconfigure.DispatcherServletRegistrationBean
+[BEAN INIT] errorPageCustomizer -> org.springframework.boot.webmvc.autoconfigure.error.ErrorMvcAutoConfiguration$ErrorPageCustomizer
+2026-01-24T13:24:18.043+05:30  INFO 8353 --- [demo-project] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 8080 (http)
+2026-01-24T13:24:18.047+05:30  INFO 8353 --- [demo-project] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-01-24T13:24:18.047+05:30  INFO 8353 --- [demo-project] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.15]
+2026-01-24T13:24:18.062+05:30  INFO 8353 --- [demo-project] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 326 ms
+[BEAN INIT] requestContextFilter -> org.springframework.boot.servlet.filter.OrderedRequestContextFilter
+[BEAN INIT] org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration -> org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration
+[BEAN INIT] formContentFilter -> org.springframework.boot.servlet.filter.OrderedFormContentFilter
+[BEAN INIT] org.springframework.boot.servlet.autoconfigure.HttpEncodingAutoConfiguration -> org.springframework.boot.servlet.autoconfigure.HttpEncodingAutoConfiguration
+[BEAN INIT] spring.servlet.encoding-org.springframework.boot.servlet.autoconfigure.ServletEncodingProperties -> org.springframework.boot.servlet.autoconfigure.ServletEncodingProperties
+[BEAN INIT] characterEncodingFilter -> org.springframework.boot.servlet.filter.OrderedCharacterEncodingFilter
+[BEAN INIT] org.springframework.boot.autoconfigure.task.TaskExecutorConfigurations$TaskExecutorConfiguration -> org.springframework.boot.autoconfigure.task.TaskExecutorConfigurations$TaskExecutorConfiguration
+[BEAN INIT] org.springframework.boot.autoconfigure.task.TaskExecutorConfigurations$ThreadPoolTaskExecutorBuilderConfiguration -> org.springframework.boot.autoconfigure.task.TaskExecutorConfigurations$ThreadPoolTaskExecutorBuilderConfiguration
+[BEAN INIT] spring.task.execution-org.springframework.boot.autoconfigure.task.TaskExecutionProperties -> org.springframework.boot.autoconfigure.task.TaskExecutionProperties
+[BEAN INIT] threadPoolTaskExecutorBuilder -> org.springframework.boot.task.ThreadPoolTaskExecutorBuilder
+[BEAN INIT] applicationTaskExecutor -> org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
+[BEAN INIT] org.springframework.boot.jdbc.autoconfigure.DataSourceInitializationAutoConfiguration -> org.springframework.boot.jdbc.autoconfigure.DataSourceInitializationAutoConfiguration
+[BEAN INIT] org.springframework.boot.jdbc.autoconfigure.DataSourceConfiguration$Hikari -> org.springframework.boot.jdbc.autoconfigure.DataSourceConfiguration$Hikari
+[BEAN INIT] spring.datasource-org.springframework.boot.jdbc.autoconfigure.DataSourceProperties -> org.springframework.boot.jdbc.autoconfigure.DataSourceProperties
+[BEAN INIT] org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration$PooledDataSourceConfiguration -> org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration$PooledDataSourceConfiguration
+[BEAN INIT] jdbcConnectionDetails -> org.springframework.boot.jdbc.autoconfigure.PropertiesJdbcConnectionDetails
+[BEAN INIT] dataSource -> com.zaxxer.hikari.HikariDataSource
+[BEAN INIT] spring.sql.init-org.springframework.boot.sql.autoconfigure.init.SqlInitializationProperties -> org.springframework.boot.sql.autoconfigure.init.SqlInitializationProperties
+[BEAN INIT] dataSourceScriptDatabaseInitializer -> org.springframework.boot.jdbc.autoconfigure.ApplicationDataSourceScriptDatabaseInitializer
+[BEAN INIT] spring.jpa-org.springframework.boot.jpa.autoconfigure.JpaProperties -> org.springframework.boot.jpa.autoconfigure.JpaProperties
+[BEAN INIT] spring.jpa.hibernate-org.springframework.boot.hibernate.autoconfigure.HibernateProperties -> org.springframework.boot.hibernate.autoconfigure.HibernateProperties
+[BEAN INIT] org.springframework.boot.jdbc.autoconfigure.DataSourcePoolMetadataProvidersConfiguration$HikariPoolDataSourceMetadataProviderConfiguration -> org.springframework.boot.jdbc.autoconfigure.DataSourcePoolMetadataProvidersConfiguration$HikariPoolDataSourceMetadataProviderConfiguration
+[BEAN INIT] hikariPoolDataSourceMetadataProvider -> org.springframework.boot.jdbc.autoconfigure.DataSourcePoolMetadataProvidersConfiguration$HikariPoolDataSourceMetadataProviderConfiguration$$Lambda/0x00000070013ebd10
+[BEAN INIT] org.springframework.boot.hibernate.autoconfigure.HibernateJpaConfiguration -> org.springframework.boot.hibernate.autoconfigure.HibernateJpaConfiguration
+[BEAN INIT] jpaVendorAdapter -> org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter
+[BEAN INIT] entityManagerFactoryBuilder -> org.springframework.boot.jpa.EntityManagerFactoryBuilder
+[BEAN INIT] persistenceManagedTypes -> org.springframework.orm.jpa.persistenceunit.SimplePersistenceManagedTypes
+2026-01-24T13:24:18.107+05:30  INFO 8353 --- [demo-project] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-01-24T13:24:18.245+05:30  INFO 8353 --- [demo-project] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@388c519
+2026-01-24T13:24:18.246+05:30  INFO 8353 --- [demo-project] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+[BEAN INIT] entityManagerFactory -> org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean
+2026-01-24T13:24:18.257+05:30  INFO 8353 --- [demo-project] [           main] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-01-24T13:24:18.270+05:30  INFO 8353 --- [demo-project] [           main] org.hibernate.orm.core                   : HHH000001: Hibernate ORM core version 7.2.0.Final
+2026-01-24T13:24:18.389+05:30  INFO 8353 --- [demo-project] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-01-24T13:24:18.425+05:30  INFO 8353 --- [demo-project] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:mysql://localhost:3306/demo_project]
+	Database driver: MySQL Connector/J
+	Database dialect: MySQLDialect
+	Database version: 8.0.44
+	Default catalog/schema: demo_project/undefined
+	Autocommit mode: undefined/unknown
+	Isolation level: REPEATABLE_READ [default REPEATABLE_READ]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-01-24T13:24:18.532+05:30  INFO 8353 --- [demo-project] [           main] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-01-24T13:24:18.534+05:30  INFO 8353 --- [demo-project] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+[BEAN INIT] demoProjectApplication -> com.bsharan.demo_project.DemoProjectApplication
+Order bean being created
+[BEAN INIT] order -> com.bsharan.demo_project.components.Order
+Order bean post construct called
+Product constructor called
+[BEAN INIT] product -> com.bsharan.demo_project.components.Product
+Product post construct is called
+User constructor called
+[BEAN INIT] user -> com.bsharan.demo_project.components.User
+User bean post construct called
+Order object : com.bsharan.demo_project.components.Order
+[BEAN INIT] org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration -> org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration
+[BEAN INIT] org.springframework.boot.context.properties.EnableConfigurationPropertiesRegistrar.methodValidationExcludeFilter -> org.springframework.boot.validation.beanvalidation.MethodValidationExcludeFilter$$Lambda/0x00000070017a1d88
+[BEAN INIT] org.springframework.boot.webmvc.autoconfigure.DispatcherServletAutoConfiguration -> org.springframework.boot.webmvc.autoconfigure.DispatcherServletAutoConfiguration
+[BEAN INIT] org.springframework.boot.autoconfigure.task.TaskExecutorConfigurations$SimpleAsyncTaskExecutorBuilderConfiguration -> org.springframework.boot.autoconfigure.task.TaskExecutorConfigurations$SimpleAsyncTaskExecutorBuilderConfiguration
+[BEAN INIT] simpleAsyncTaskExecutorBuilder -> org.springframework.boot.task.SimpleAsyncTaskExecutorBuilder
+[BEAN INIT] org.springframework.boot.autoconfigure.task.TaskExecutorConfigurations$AsyncConfigurerConfiguration -> org.springframework.boot.autoconfigure.task.TaskExecutorConfigurations$AsyncConfigurerConfiguration
+[BEAN INIT] applicationTaskExecutorAsyncConfigurer -> org.springframework.boot.autoconfigure.task.TaskExecutorConfigurations$ApplicationTaskExecutorAsyncConfigurer
+[BEAN INIT] org.springframework.boot.autoconfigure.task.TaskExecutorConfigurations$BootstrapExecutorConfiguration -> org.springframework.boot.autoconfigure.task.TaskExecutorConfigurations$BootstrapExecutorConfiguration
+[BEAN INIT] org.springframework.boot.autoconfigure.task.TaskExecutionAutoConfiguration -> org.springframework.boot.autoconfigure.task.TaskExecutionAutoConfiguration
+[BEAN INIT] org.springframework.boot.webmvc.autoconfigure.error.ErrorMvcAutoConfiguration$WhitelabelErrorViewConfiguration -> org.springframework.boot.webmvc.autoconfigure.error.ErrorMvcAutoConfiguration$WhitelabelErrorViewConfiguration
+[BEAN INIT] error -> org.springframework.boot.webmvc.autoconfigure.error.ErrorMvcAutoConfiguration$StaticView
+[BEAN INIT] beanNameViewResolver -> org.springframework.web.servlet.view.BeanNameViewResolver
+[BEAN INIT] org.springframework.boot.webmvc.autoconfigure.error.ErrorMvcAutoConfiguration$DefaultErrorViewResolverConfiguration -> org.springframework.boot.webmvc.autoconfigure.error.ErrorMvcAutoConfiguration$DefaultErrorViewResolverConfiguration
+[BEAN INIT] conventionErrorViewResolver -> org.springframework.boot.webmvc.autoconfigure.error.DefaultErrorViewResolver
+[BEAN INIT] errorAttributes -> org.springframework.boot.webmvc.error.DefaultErrorAttributes
+[BEAN INIT] basicErrorController -> org.springframework.boot.webmvc.autoconfigure.error.BasicErrorController
+[BEAN INIT] org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration$WebMvcAutoConfigurationAdapter -> org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration$WebMvcAutoConfigurationAdapter
+[BEAN INIT] org.springframework.data.web.config.SpringDataWebConfiguration -> org.springframework.data.web.config.SpringDataWebConfiguration
+[BEAN INIT] org.springframework.boot.jpa.autoconfigure.JpaBaseConfiguration$JpaWebConfiguration -> org.springframework.boot.jpa.autoconfigure.JpaBaseConfiguration$JpaWebConfiguration
+2026-01-24T13:24:18.558+05:30  WARN 8353 --- [demo-project] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+[BEAN INIT] openEntityManagerInViewInterceptor -> org.springframework.orm.jpa.support.OpenEntityManagerInViewInterceptor
+[BEAN INIT] openEntityManagerInViewInterceptorConfigurer -> org.springframework.boot.jpa.autoconfigure.JpaBaseConfiguration$JpaWebConfiguration$1
+[BEAN INIT] org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration$EnableWebMvcConfiguration -> org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration$EnableWebMvcConfiguration
+[BEAN INIT] mvcConversionService -> org.springframework.boot.autoconfigure.web.format.WebConversionService
+[BEAN INIT] mvcResourceUrlProvider -> org.springframework.web.servlet.resource.ResourceUrlProvider
+[BEAN INIT] welcomePageHandlerMapping -> org.springframework.boot.webmvc.autoconfigure.WelcomePageHandlerMapping
+[BEAN INIT] welcomePageNotAcceptableHandlerMapping -> org.springframework.boot.webmvc.autoconfigure.WelcomePageNotAcceptableHandlerMapping
+[BEAN INIT] localeResolver -> org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver
+[BEAN INIT] flashMapManager -> org.springframework.web.servlet.support.SessionFlashMapManager
+[BEAN INIT] viewNameTranslator -> org.springframework.web.servlet.view.DefaultRequestToViewNameTranslator
+[BEAN INIT] mvcValidator -> org.springframework.web.servlet.config.annotation.WebMvcConfigurationSupport$NoOpValidator
+[BEAN INIT] org.springframework.boot.http.converter.autoconfigure.HttpMessageConvertersAutoConfiguration$StringHttpMessageConverterConfiguration -> org.springframework.boot.http.converter.autoconfigure.HttpMessageConvertersAutoConfiguration$StringHttpMessageConverterConfiguration
+[BEAN INIT] spring.http.converters-org.springframework.boot.http.converter.autoconfigure.HttpMessageConvertersProperties -> org.springframework.boot.http.converter.autoconfigure.HttpMessageConvertersProperties
+[BEAN INIT] stringHttpMessageConvertersCustomizer -> org.springframework.boot.http.converter.autoconfigure.HttpMessageConvertersAutoConfiguration$StringHttpMessageConvertersCustomizer
+[BEAN INIT] org.springframework.boot.http.converter.autoconfigure.JacksonHttpMessageConvertersConfiguration$JacksonJsonHttpMessageConverterConfiguration -> org.springframework.boot.http.converter.autoconfigure.JacksonHttpMessageConvertersConfiguration$JacksonJsonHttpMessageConverterConfiguration
+[BEAN INIT] org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration -> org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration
+[BEAN INIT] org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration$JsonProblemDetailsConfiguration -> org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration$JsonProblemDetailsConfiguration
+[BEAN INIT] problemDetailJsonMapperBuilderCustomizer -> org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration$JsonProblemDetailsConfiguration$ProblemDetailJsonMapperBuilderCustomizer
+[BEAN INIT] org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration$JacksonJsonMapperBuilderCustomizerConfiguration -> org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration$JacksonJsonMapperBuilderCustomizerConfiguration
+[BEAN INIT] spring.jackson-org.springframework.boot.jackson.autoconfigure.JacksonProperties -> org.springframework.boot.jackson.autoconfigure.JacksonProperties
+[BEAN INIT] spring.data.web-org.springframework.boot.data.autoconfigure.web.DataWebProperties -> org.springframework.boot.data.autoconfigure.web.DataWebProperties
+[BEAN INIT] org.springframework.boot.data.autoconfigure.web.DataWebAutoConfiguration -> org.springframework.boot.data.autoconfigure.web.DataWebAutoConfiguration
+[BEAN INIT] springDataWebSettings -> org.springframework.data.web.config.SpringDataWebSettings
+[BEAN INIT] org.springframework.data.web.config.SpringDataJackson3Configuration -> org.springframework.data.web.config.SpringDataJackson3Configuration
+[BEAN INIT] jackson3GeoModule -> org.springframework.data.geo.GeoJacksonModule
+[BEAN INIT] jackson3pageModule -> org.springframework.data.web.config.SpringDataJackson3Configuration$PageModule
+[BEAN INIT] org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration$JacksonMixinConfiguration -> org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration$JacksonMixinConfiguration
+[BEAN INIT] jacksonMixinModuleEntries -> org.springframework.boot.jackson.JacksonMixinModuleEntries
+[BEAN INIT] jacksonMixinModule -> org.springframework.boot.jackson.JacksonMixinModule
+[BEAN INIT] jsonComponentModule -> org.springframework.boot.jackson.JacksonComponentModule
+[BEAN INIT] standardJsonMapperBuilderCustomizer -> org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration$JacksonJsonMapperBuilderCustomizerConfiguration$StandardJsonMapperBuilderCustomizer
+[BEAN INIT] jsonMapperBuilder -> tools.jackson.databind.json.JsonMapper$Builder
+[BEAN INIT] jacksonJsonMapper -> tools.jackson.databind.json.JsonMapper
+[BEAN INIT] jacksonJsonHttpMessageConvertersCustomizer -> org.springframework.boot.http.converter.autoconfigure.JacksonHttpMessageConvertersConfiguration$JacksonJsonHttpMessageConvertersCustomizer
+[BEAN INIT] org.springframework.boot.http.converter.autoconfigure.HttpMessageConvertersAutoConfiguration -> org.springframework.boot.http.converter.autoconfigure.HttpMessageConvertersAutoConfiguration
+[BEAN INIT] serverConvertersCustomizer -> org.springframework.boot.http.converter.autoconfigure.DefaultServerHttpMessageConvertersCustomizer
+[BEAN INIT] mvcContentNegotiationManager -> org.springframework.web.accept.ContentNegotiationManager
+[BEAN INIT] requestMappingHandlerMapping -> org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping
+[BEAN INIT] mvcPatternParser -> org.springframework.web.util.pattern.PathPatternParser
+[BEAN INIT] mvcUrlPathHelper -> org.springframework.web.util.UrlPathHelper
+[BEAN INIT] mvcPathMatcher -> org.springframework.util.AntPathMatcher
+[BEAN INIT] beanNameHandlerMapping -> org.springframework.web.servlet.handler.BeanNameUrlHandlerMapping
+[BEAN INIT] routerFunctionMapping -> org.springframework.web.servlet.function.support.RouterFunctionMapping
+[BEAN INIT] resourceHandlerMapping -> org.springframework.web.servlet.handler.SimpleUrlHandlerMapping
+[BEAN INIT] sortCustomizer -> org.springframework.boot.data.autoconfigure.web.DataWebAutoConfiguration$$Lambda/0x00000070017e8840
+[BEAN INIT] sortResolver -> org.springframework.data.web.SortHandlerMethodArgumentResolver
+[BEAN INIT] pageableCustomizer -> org.springframework.boot.data.autoconfigure.web.DataWebAutoConfiguration$$Lambda/0x00000070017e95c0
+[BEAN INIT] pageableResolver -> org.springframework.data.web.PageableHandlerMethodArgumentResolver
+[BEAN INIT] requestMappingHandlerAdapter -> org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter
+[BEAN INIT] mvcViewResolver -> org.springframework.web.servlet.view.ViewResolverComposite
+[BEAN INIT] defaultViewResolver -> org.springframework.web.servlet.view.InternalResourceViewResolver
+[BEAN INIT] viewResolver -> org.springframework.web.servlet.view.ContentNegotiatingViewResolver
+[BEAN INIT] handlerFunctionAdapter -> org.springframework.web.servlet.function.support.HandlerFunctionAdapter
+[BEAN INIT] mvcUriComponentsContributor -> org.springframework.web.method.support.CompositeUriComponentsContributor
+[BEAN INIT] httpRequestHandlerAdapter -> org.springframework.web.servlet.mvc.HttpRequestHandlerAdapter
+[BEAN INIT] simpleControllerHandlerAdapter -> org.springframework.web.servlet.mvc.SimpleControllerHandlerAdapter
+[BEAN INIT] handlerExceptionResolver -> org.springframework.web.servlet.handler.HandlerExceptionResolverComposite
+[BEAN INIT] org.springframework.boot.autoconfigure.aop.AopAutoConfiguration$AspectJAutoProxyingConfiguration$CglibAutoProxyConfiguration -> org.springframework.boot.autoconfigure.aop.AopAutoConfiguration$AspectJAutoProxyingConfiguration$CglibAutoProxyConfiguration
+[BEAN INIT] org.springframework.boot.autoconfigure.aop.AopAutoConfiguration$AspectJAutoProxyingConfiguration -> org.springframework.boot.autoconfigure.aop.AopAutoConfiguration$AspectJAutoProxyingConfiguration
+[BEAN INIT] org.springframework.boot.autoconfigure.aop.AopAutoConfiguration -> org.springframework.boot.autoconfigure.aop.AopAutoConfiguration
+[BEAN INIT] org.springframework.boot.autoconfigure.availability.ApplicationAvailabilityAutoConfiguration -> org.springframework.boot.autoconfigure.availability.ApplicationAvailabilityAutoConfiguration
+[BEAN INIT] applicationAvailability -> org.springframework.boot.availability.ApplicationAvailabilityBean
+[BEAN INIT] org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration -> org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration
+[BEAN INIT] org.springframework.boot.autoconfigure.context.LifecycleAutoConfiguration -> org.springframework.boot.autoconfigure.context.LifecycleAutoConfiguration
+[BEAN INIT] spring.lifecycle-org.springframework.boot.autoconfigure.context.LifecycleProperties -> org.springframework.boot.autoconfigure.context.LifecycleProperties
+[BEAN INIT] lifecycleProcessor -> org.springframework.context.support.DefaultLifecycleProcessor
+[BEAN INIT] spring.info-org.springframework.boot.autoconfigure.info.ProjectInfoProperties -> org.springframework.boot.autoconfigure.info.ProjectInfoProperties
+[BEAN INIT] org.springframework.boot.autoconfigure.info.ProjectInfoAutoConfiguration -> org.springframework.boot.autoconfigure.info.ProjectInfoAutoConfiguration
+[BEAN INIT] org.springframework.boot.autoconfigure.task.TaskSchedulingConfigurations$ThreadPoolTaskSchedulerBuilderConfiguration -> org.springframework.boot.autoconfigure.task.TaskSchedulingConfigurations$ThreadPoolTaskSchedulerBuilderConfiguration
+[BEAN INIT] spring.task.scheduling-org.springframework.boot.autoconfigure.task.TaskSchedulingProperties -> org.springframework.boot.autoconfigure.task.TaskSchedulingProperties
+[BEAN INIT] threadPoolTaskSchedulerBuilder -> org.springframework.boot.task.ThreadPoolTaskSchedulerBuilder
+[BEAN INIT] org.springframework.boot.autoconfigure.task.TaskSchedulingConfigurations$SimpleAsyncTaskSchedulerBuilderConfiguration -> org.springframework.boot.autoconfigure.task.TaskSchedulingConfigurations$SimpleAsyncTaskSchedulerBuilderConfiguration
+[BEAN INIT] simpleAsyncTaskSchedulerBuilder -> org.springframework.boot.task.SimpleAsyncTaskSchedulerBuilder
+[BEAN INIT] org.springframework.boot.autoconfigure.task.TaskSchedulingAutoConfiguration -> org.springframework.boot.autoconfigure.task.TaskSchedulingAutoConfiguration
+[BEAN INIT] org.springframework.data.web.config.ProjectingArgumentResolverRegistrar -> org.springframework.data.web.config.ProjectingArgumentResolverRegistrar
+[BEAN INIT] offsetResolver -> org.springframework.data.web.OffsetScrollPositionHandlerMethodArgumentResolver
+[BEAN INIT] org.springframework.boot.transaction.jta.autoconfigure.JtaAutoConfiguration -> org.springframework.boot.transaction.jta.autoconfigure.JtaAutoConfiguration
+[BEAN INIT] org.springframework.boot.jdbc.autoconfigure.DataSourcePoolMetadataProvidersConfiguration -> org.springframework.boot.jdbc.autoconfigure.DataSourcePoolMetadataProvidersConfiguration
+[BEAN INIT] org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration -> org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration
+[BEAN INIT] org.springframework.boot.transaction.autoconfigure.TransactionManagerCustomizationAutoConfiguration -> org.springframework.boot.transaction.autoconfigure.TransactionManagerCustomizationAutoConfiguration
+[BEAN INIT] transactionExecutionListeners -> org.springframework.boot.transaction.autoconfigure.ExecutionListenersTransactionManagerCustomizer
+[BEAN INIT] spring.transaction-org.springframework.boot.transaction.autoconfigure.TransactionProperties -> org.springframework.boot.transaction.autoconfigure.TransactionProperties
+[BEAN INIT] platformTransactionManagerCustomizers -> org.springframework.boot.transaction.autoconfigure.TransactionManagerCustomizers
+[BEAN INIT] org.springframework.boot.jpa.autoconfigure.JpaBaseConfiguration$PersistenceManagedTypesConfiguration -> org.springframework.boot.jpa.autoconfigure.JpaBaseConfiguration$PersistenceManagedTypesConfiguration
+[BEAN INIT] transactionManager -> org.springframework.orm.jpa.JpaTransactionManager
+[BEAN INIT] org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration -> org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration
+[BEAN INIT] org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration -> org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration
+[BEAN INIT] eagerJpaMetamodelCacheCleanup -> org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration$$Lambda/0x0000007001802a48
+[BEAN INIT] jpaSharedEM_entityManagerFactory -> jdk.proxy2.$Proxy98
+[BEAN INIT] org.springframework.data.jpa.util.JpaMetamodelCacheCleanup -> org.springframework.data.jpa.util.JpaMetamodelCacheCleanup
+[BEAN INIT] org.springframework.data.jpa.repository.support.JpaEvaluationContextExtension -> org.springframework.data.jpa.repository.support.JpaEvaluationContextExtension
+[BEAN INIT] data-jpa.repository-aot-processor#0 -> org.springframework.data.jpa.repository.config.JpaRepositoryConfigExtension$JpaRepositoryRegistrationAotProcessor
+[BEAN INIT] org.springframework.boot.http.converter.autoconfigure.JacksonHttpMessageConvertersConfiguration -> org.springframework.boot.http.converter.autoconfigure.JacksonHttpMessageConvertersConfiguration
+[BEAN INIT] org.springframework.boot.http.converter.autoconfigure.Jackson2HttpMessageConvertersConfiguration -> org.springframework.boot.http.converter.autoconfigure.Jackson2HttpMessageConvertersConfiguration
+[BEAN INIT] clientConvertersCustomizer -> org.springframework.boot.http.converter.autoconfigure.DefaultClientHttpMessageConvertersCustomizer
+[BEAN INIT] org.springframework.boot.jdbc.autoconfigure.JdbcTemplateConfiguration -> org.springframework.boot.jdbc.autoconfigure.JdbcTemplateConfiguration
+[BEAN INIT] spring.jdbc-org.springframework.boot.jdbc.autoconfigure.JdbcProperties -> org.springframework.boot.jdbc.autoconfigure.JdbcProperties
+[BEAN INIT] jdbcTemplate -> org.springframework.jdbc.core.JdbcTemplate
+[BEAN INIT] org.springframework.boot.jdbc.autoconfigure.NamedParameterJdbcTemplateConfiguration -> org.springframework.boot.jdbc.autoconfigure.NamedParameterJdbcTemplateConfiguration
+[BEAN INIT] namedParameterJdbcTemplate -> org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
+[BEAN INIT] org.springframework.boot.jdbc.autoconfigure.JdbcTemplateAutoConfiguration -> org.springframework.boot.jdbc.autoconfigure.JdbcTemplateAutoConfiguration
+[BEAN INIT] org.springframework.boot.jdbc.autoconfigure.JdbcClientAutoConfiguration -> org.springframework.boot.jdbc.autoconfigure.JdbcClientAutoConfiguration
+[BEAN INIT] jdbcClient -> org.springframework.jdbc.core.simple.DefaultJdbcClient
+[BEAN INIT] org.springframework.boot.persistence.autoconfigure.PersistenceExceptionTranslationAutoConfiguration -> org.springframework.boot.persistence.autoconfigure.PersistenceExceptionTranslationAutoConfiguration
+[BEAN INIT] multipartResolver -> org.springframework.web.multipart.support.StandardServletMultipartResolver
+[BEAN INIT] org.springframework.boot.jdbc.autoconfigure.DataSourceTransactionManagerAutoConfiguration$JdbcTransactionManagerConfiguration -> org.springframework.boot.jdbc.autoconfigure.DataSourceTransactionManagerAutoConfiguration$JdbcTransactionManagerConfiguration
+[BEAN INIT] org.springframework.boot.jdbc.autoconfigure.DataSourceTransactionManagerAutoConfiguration -> org.springframework.boot.jdbc.autoconfigure.DataSourceTransactionManagerAutoConfiguration
+[BEAN INIT] org.springframework.boot.transaction.autoconfigure.TransactionAutoConfiguration$EnableTransactionManagementConfiguration$CglibAutoProxyConfiguration -> org.springframework.boot.transaction.autoconfigure.TransactionAutoConfiguration$EnableTransactionManagementConfiguration$CglibAutoProxyConfiguration
+[BEAN INIT] org.springframework.boot.transaction.autoconfigure.TransactionAutoConfiguration$EnableTransactionManagementConfiguration -> org.springframework.boot.transaction.autoconfigure.TransactionAutoConfiguration$EnableTransactionManagementConfiguration
+[BEAN INIT] org.springframework.boot.transaction.autoconfigure.TransactionAutoConfiguration$TransactionTemplateConfiguration -> org.springframework.boot.transaction.autoconfigure.TransactionAutoConfiguration$TransactionTemplateConfiguration
+[BEAN INIT] transactionTemplate -> org.springframework.transaction.support.TransactionTemplate
+[BEAN INIT] org.springframework.boot.transaction.autoconfigure.TransactionAutoConfiguration -> org.springframework.boot.transaction.autoconfigure.TransactionAutoConfiguration
+2026-01-24T13:24:18.671+05:30  INFO 8353 --- [demo-project] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 8080 (http) with context path '/'
+2026-01-24T13:24:18.674+05:30  INFO 8353 --- [demo-project] [           main] c.b.demo_project.DemoProjectApplication  : Started DemoProjectApplication in 1.093 seconds (process running for 1.233)
