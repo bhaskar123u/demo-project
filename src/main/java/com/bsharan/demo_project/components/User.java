@@ -2,14 +2,12 @@ package com.bsharan.demo_project.components;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 public class User {
-
-    private static final Logger log = LoggerFactory.getLogger(User.class);
 
     private final Order order;
 
@@ -22,9 +20,7 @@ public class User {
     @PostConstruct
     public void init(){
         log.info("User bean post construct called");
-        log.info("Order object injected, hashcode {}", order.hashCode());
-        log.info("Order object injected, class {}", order.getClass().getName());
-        //log.info("Product ordered {},{}",order.getProduct().getProductId(), order.getProduct().getProductName());
+        log.info("Order object injected in User? hashcode, class {} {}", order.hashCode(), order.getClass().getName());
     }
 
     @PreDestroy

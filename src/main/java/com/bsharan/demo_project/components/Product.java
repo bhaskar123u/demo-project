@@ -4,17 +4,17 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.Getter;
 import lombok.Setter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
-// @Component -> spring calls default constructor to create bean, if default constructor is not present we can use @Bean
-@Component
+@Lazy
+@Slf4j
 @Getter
 @Setter
+@Component // spring calls default constructor to create bean, if default constructor is not present we can use @Bean
 public class Product {
 
-    private static final Logger log = LoggerFactory.getLogger(Product.class);
     private final String productName;
     private final long productId;
 
@@ -37,5 +37,13 @@ public class Product {
     @PreDestroy
     public void destroy(){
         log.info("Product pre destroy is called");
+    }
+
+    @Override
+    public String toString() {
+        return "Product{" +
+                "productName='" + productName + '\'' +
+                ", productId=" + productId +
+                '}';
     }
 }

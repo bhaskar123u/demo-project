@@ -1,6 +1,17 @@
 ## Spring-boot udemy course notes
 
 1. Spring boot is known for dependency injection. When we start a spring-boot project, beans are created in Application Context and stored for injections into classes later.
+2. When we have a @Lazy on a field in a class as below
+```java
+@Component
+public class OnlineOrder implements Order {
+    @Lazy
+    @Autowired
+    Product product;
+    // other fields
+}
+```
+when spring creates it's object, then it adds a proxy object for the time being and when we call it, spring injects the actual bean. Now if the product class is marked as final, spring would not be able to create a proxy and inject, then the application will fail to start.
 2. AOP : Aspect Oriented Programming, is known for offloading the cross-cutting concerns such as logging, updating metrics etc. so that we can focus on writing main business logic.
 3. AOP key terms -> Aspect(File containing advice and pointcut), Advice(it is a method that does some task), Pointcut(tells where all this advice is applicable).
 4. Pointcut -> tells where advice should be applied. Types of point cuts :
@@ -176,26 +187,26 @@ public void fetchAadharCardForVerification(){
 ```
 20. Springboot JPA
 ```text
-                     ┌────────────────────────┐
-                     │    Application Logic   │
-                     └─────────────┬──────────┘
-                                   │
-                     ┌─────────────▼──────────────┐
-                     │ ORM Framework (JPA - API)  │
-                     │ e.g., Hibernate/OpenJPA    │
-                     └─────────────┬──────────────┘
-                                   │
-                     ┌─────────────▼──────────────┐
-                     │     JDBC (API Interface)   │
-                     └─────────────┬──────────────┘
-                                   │
-                     ┌─────────────▼─────────────────┐
-                     │ Database Driver (Actual Impl) │
-                     └─────────────┬─────────────────┘
-                                   │
-                     ┌─────────────▼──────────────┐
-                     │     Relational Database    │
-                     └────────────────────────────┘
+                                         ┌────────────────────────┐
+                                         │    Application Logic   │
+                                         └─────────────┬──────────┘
+                                                       │
+                                         ┌─────────────▼──────────────┐
+                                         │ ORM Framework (JPA - API)  │
+                                         │ e.g., Hibernate/OpenJPA    │
+                                         └─────────────┬──────────────┘
+                                                       │
+                                         ┌─────────────▼──────────────┐
+                                         │     JDBC (API Interface)   │
+                                         └─────────────┬──────────────┘
+                                                       │
+                                         ┌─────────────▼─────────────────┐
+                                         │ Database Driver (Actual Impl) │
+                                         └─────────────┬─────────────────┘
+                                                       │
+                                         ┌─────────────▼──────────────┐
+                                         │     Relational Database    │
+                                         └────────────────────────────┘
 ```
 21. Database Driver -> It is nothing but implementation of JDBC api(s). So assume we have a class as below defined in JDBC api.
 ```java
@@ -558,6 +569,7 @@ CacheConcurrencyStrategy.READ_WRITE
 
 ![CacheConcurrencyStrategy.READ_WRITE](images/CacheConcurrency-READ-WRITE.png)
 35. JPA Annotations
+    - @Entity // we should not mark entity classes as final because most ORMs like Hibernate rely on runtime proxy classes for operations like lazy loading to loads the actual data.
     - @Table
     - @Column
     - @Id -> for PK
@@ -567,7 +579,6 @@ CacheConcurrencyStrategy.READ_WRITE
     - @SequenceGenerator -> it can pregenerate some N values and is cached at hibernate end, no DB call, directly next value can be fetched and used.
 ```java
 import jakarta.persistence.*;
-
 import java.io.Serializable;
 @Table(name = "User",
         schema = "Onboarding",
@@ -653,7 +664,6 @@ public class PassportDetails {
 }
 ```
 What happens internally, in the table User, it creates a foreign key which is PK of another table. How internally table will look like is User --> {id,passport_details_id(FK),email} and PassportDetails --> {id, email, authorisedTo, issuerCountry, issuedOn, validTill}. But if we need more control, we can use @JoinColumn.
-
 ```java
 import jakarta.persistence.JoinColumn;
 
@@ -715,5 +725,17 @@ public class User {
 }
 ```
 In this case the table for user will look like User --> {id,passport_id(FK),passport_email(FK),passport_authorisedTo(FK)}.
+
 37. Cascade types :
-    - CascadeType.PERSIST : Inserting parent automatically insert the child entities.
+    - CascadeType.PERSIST : Inserting parent automatically insert the child entities, only effecting during first time insert.
+    - CascadeType.MERGE : Updating parent entity updates child entity too. We can pass multiple cascadeType as -> @OneToOne(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    - CascadeType.REMOVE : Deleting parent entity deletes the child entity also.
+    - CascadeType.REFRESH : If we use this parent as well as child entity are loaded directly from DB, not PC is involved.
+    - CascadeType.ALL : Capability of all types.
+
+
+38. Lazy and Eager loading : Child entities are loaded either at the same time, or on use basis. We can configure this as well. Eager loading is default for @OneToOne and @ManyToOne. Generally it does a left join on parent entity and extract the child entity details. Eager loading is default for @OneToMany and @ManyToMany. We can add required config for this as shown below :
+```java
+@OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+public PassportDetails passportDetails;
+```

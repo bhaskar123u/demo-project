@@ -4,11 +4,13 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.Getter;
 import lombok.Setter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Getter
 @Setter
 @Component
@@ -16,8 +18,9 @@ import org.springframework.stereotype.Component;
 //@Profile("prod") -> this means that the bean will only be created if spring.profiles.active=prod is set in application.properties file
 public class OfflineOrder implements Order {
 
-    private static Logger log = LoggerFactory.getLogger(OfflineOrder.class);
-    private final Product product;
+    @Lazy
+    @Autowired
+    Product product;
 
     public OfflineOrder(Product product){
         this.product = product;

@@ -4,29 +4,36 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.Getter;
 import lombok.Setter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Getter
 @Setter
 @Component
 @ConditionalOnProperty(prefix = "order", value = "type", havingValue = "online", matchIfMissing = false)
 public class OnlineOrder implements Order {
 
-    private static Logger log = LoggerFactory.getLogger(OnlineOrder.class);
-    private final Product product;
+    @Lazy
+    @Autowired
+    Product product;
 
-    public OnlineOrder(Product product){
-        this.product = product;
+    public OnlineOrder(){
         log.info("OnlineOrder bean being created");
+//        if(this.product != null)
+//            log.info(this.product.getClass().getName());
+//        else{
+//            log.info("product is null");
+//        }
     }
 
     @PostConstruct
     public void init(){
         log.info("OnlineOrder bean post construct called");
+        log.info("Product object injected in OnlineOrder? hashcode, class {} {}", product.hashCode(), product.getClass().getName());
     }
 
     @PreDestroy
