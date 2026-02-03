@@ -40,7 +40,7 @@ spring creates OnlineOrder object by adding a proxy product object for the time 
    - Look for @Component, @Service... annotation classes and for each class check for eligibility based on pointcut
    - Creates a proxy and the proxy has code to execute advice (AbstractAutoProxyCreator.class, DefaultAopProxyFactory.class, ReflectiveMethodInvocation.class).
 
-11. @Transaction - works with ACID principles, underlying AOP. Can be applied at class level(automatically applied to all public methods) and method level.
+11. @Transaction - works with ACID principles, underlying AOP. Can be applied at class level(automatically applied to all public methods) or at a method level. Can we use this annotation on a class marked as final or a method marked as final? -> No, because CGLIB won't be able to create it's proxy.
 
 12. When we want ACID, we have to start DB operations in a transaction. BEGIN TRANSACTION, if all success then COMMIT else ROLLBACK. Now all of this we don't need to write, it is taken care under an AOP(TransactionAspectSupport.class). There is a joinPoint which actually invokes methods.
 
@@ -783,3 +783,4 @@ In this case the table for user will look like User --> {id,passport_id(FK),pass
 @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
 public PassportDetails passportDetails;
 ```
+39. 
