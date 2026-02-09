@@ -600,7 +600,33 @@ For every @Repository interface, Spring Data JPA creates a proxy implementation 
 
 This is why developers never need to write concrete implementation classes for repository interfaces. The Dialect is used by Hibernate during SQL generation, not during JDBC execution. Hibernate generates SQL based on entity metadata. The Dialect adapts this SQL to be database-vendor specific. JDBC simply executes the final SQL. Dialect sits inside Hibernate’s SQL generation phase, not between Hibernate and JDBC as a communication layer.
 
-26. Persistence Unit -> Logical grouping of all entity who shares same config(means who all are stored in same DB). If we are not using spring-boot we would create a persistence.xml file which holds all config related information. If we have 1 DB, we can use application.properties. ![Persistence.xml](src/main/resources/images/Persistence-Unit.png)
+26. Persistence Unit -> Concept defined by JPA. Logical grouping of all entity who shares same config(means who all are stored in same DB). PU = configuration + metadata + runtime infrastructure. If we are not using spring-boot we would create a persistence.xml file which holds all config related information. If we have 1 DB, we can use application.properties. ![Persistence.xml](src/main/resources/images/Persistence-Unit.png)
+```text
+        JVM process starts (class loads)
+             ↓
+        Spring Boot startup (SpringApplication.run(...), context initialisation)
+             ↓
+        application.properties is loaded (spring reads spring.datasource.*, spring.jpa.*)
+             ↓
+        JpaProperties / DataSourceProperties are created
+             ↓
+        DataSource is auto-configured (HikariCP, JDBC driver)
+             ↓
+        Hibernate configuration (dialect, naming strategies, entity scanning, cache config)
+             ↓
+        Persistence Unit is initialized (hibernate reads entity meta-data, builds mapping models, finalizes ORM configuration)
+             ↓
+        EntityManagerFactory is created (Hibernate SessionFactory internally)
+             ↓
+        Application is ready to serve requests (repositories are wired, EM can now be created per request/transaction)
+```
+The Persistence Unit is not created before Hibernate configuration and not after EMF creation —
+it is realized during Hibernate bootstrapping and finalized by creating the EntityManagerFactory. So conceptually: Persistence Unit = Hibernate metadata + mappings + dialect + EMF. PU ≠ Database. You can have: Multiple PUs → same database, Multiple PUs → different databases
+Example:
+  - PU1 → MySQL (schema A)
+  - PU2 → MySQL (schema B)
+  - PU3 → PostgreSQL
+All inside one JVM.
 
 27. With each PU, spring-boot creates one EntityManagerFactory and one TransactionManager.
 ```text
@@ -626,7 +652,7 @@ JTA transaction manager does 2PC. Manages transactions across multiple DBs. All 
 
 28. Entity Life Cycle. It is managed in PC. When we issue a command such as save() or delete(), at first it is stored in managed persistence. At some point when commit(flush()) command is issued then only the entities gets save in DB.  ![Entity-Lifecycle](src/main/resources/images/Entity-Lifecycle.png)
 
-29. Entity Manager Factory -> It does expensive boot-time work:
+29. EntityManagerFactory -> It does expensive boot-time work:
     - scans all entities (@Entity classes)
     - builds ORM metadata (mapping, annotations, table info, joins…)
     - builds metamodel
