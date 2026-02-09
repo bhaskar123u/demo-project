@@ -12,11 +12,11 @@ public class OnlineOrder implements Order {
     // other fields
 }
 ```
-spring creates OnlineOrder object by adding a proxy product object for the time being. When we want to use product then spring injects the actual bean. If the product class is marked as final, spring would not be able to create a proxy and inject, then the application will fail to start.
+spring creates OnlineOrder object by adding a proxy product object for the time being. When we want to use product then spring injects the actual bean. If the product class is marked as final, spring would not be able to create a proxy and inject and the application will fail to start.
 
 3. AOP : Aspect Oriented Programming, is known for offloading the cross-cutting concerns such as logging, updating metrics etc. so that we can focus on writing main business logic.
 
-4. AOP key terms -> Aspect(File containing advice and pointcut), Advice(it is a method that does some task), Pointcut(tells where all this advice is applicable).
+4. AOP key terms -> Aspect(it is the file containing advice and pointcut), Advice(it is a method that perform some cross-cutting task), Pointcut(it tells where all this advice is applicable).
 
 5. Pointcut -> tells where advice should be applied. Types of point cuts :
    - execution(for methods matching the pointcut expression) e.g., @Before("execution(public String com.bsharan.demo_project.components.User.init())"), wildcards can be used (*(exact 1 match) ..(0 or more match))
@@ -40,28 +40,28 @@ spring creates OnlineOrder object by adding a proxy product object for the time 
    - Look for @Component, @Service... annotation classes and for each class check for eligibility based on pointcut
    - Creates a proxy and the proxy has code to execute advice (AbstractAutoProxyCreator.class, DefaultAopProxyFactory.class, ReflectiveMethodInvocation.class).
 
-11. @Transaction - works with ACID principles, underlying AOP. Can be applied at class level(automatically applied to all public methods) or at a method level. Can we use this annotation on a class marked as final or a method marked as final? -> No, because CGLIB won't be able to create it's proxy.
+11. @Transaction - used when we want an operation to execute under a transaction(AOP behind the scene). If applied at class level it automatically applied to all public methods and it can also be applied at a method level. Can we use this annotation on a class marked as final or a method marked as final? -> No, because CGLIB won't be able to create it's proxy.
 
 12. When we want ACID, we have to start DB operations in a transaction. BEGIN TRANSACTION, if all success then COMMIT else ROLLBACK. Now all of this we don't need to write, it is taken care under an AOP(TransactionAspectSupport.class). There is a joinPoint which actually invokes methods.
 
-13. Below is the hierarchy for transaction managers in spring-boot. * marked are for local transactions.
+13. Below is the hierarchy for transaction managers in spring-boot. * marked are for local transactions(happening in a single machine)
 ```text
-                    <<TransactionManager>>
-                                |
-                                v
-                    <<PlatformTransactionManager>> (getTransaction(), commit(), rollback())
-                                |
-                                v
-                    AbstractPlatformTransactionManager (default implementation for above methods)
-                                |
-                                v
-            +---------------------------------------------+
-            |               |               |             |
-            v               v               v             v
-    *DataSourceTM      *Hibernate-TM     *JPA-TM     JTA-TM (distributed, 2PC)
-            |                                 
-            v                                 
-        JDBC-TM(local JDBC)
+                <<TransactionManager>>
+                            |
+                            v
+                <<PlatformTransactionManager>> (getTransaction(), commit(), rollback())
+                            |
+                            v
+                AbstractPlatformTransactionManager (default implementation for above methods)
+                            |
+                            v
+        +---------------------------------------------+
+        |               |               |             |
+        v               v               v             v
+*DataSourceTM      *Hibernate-TM     *JPA-TM     JTA-TM (distributed, 2PC)
+        |                                 
+        v                                 
+    JDBC-TM(local JDBC)
 ```
 14. Transaction Management -> Declarative approach(@Transactional), Programmatic approach
 
@@ -89,7 +89,8 @@ public class AppConfig {
         return dataSource;
     }
 
-    // if we don't provide any name, the method name is the bean name, here bean name is -> "userTransactionManager"
+    // if we don't provide any name, the method name is the bean name
+    // here bean name is -> "userTransactionManager"
     @Bean
     public PlatformTransactionManager userTransactionManager(DataSource dataSource) {
         return new DataSourceTransactionManager(dataSource);
@@ -118,10 +119,13 @@ public class User {
         // 2. call external API
         // 3. update DB
     }
-    // issue in this code, if the external API is taking a lot of time, the DB would be locked until then under a transaction, this is a case of resource contention, solution -> programmatic transaction management in which we can control the flow i.e., where to begin, where to commit and rollback
+    // issue in this code, if the external API is taking a lot of time, the DB,
+    // connection pool etc. would be locked until then under a transaction, this
+    // is a case of resource contention, solution -> programmatic transaction management
+    // in which we can control the flow i.e., where to begin, where to commit and rollback
 }
 ```
-17. We can use the bean as below, there are another ways also, using TransactionTemplate
+17. We can create a bean as below, there are also another ways using TransactionTemplate
 ```java
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -342,7 +346,18 @@ Problem with this approach is a lot of boilerplate code is written again and aga
   - Closing of DB connection and other objects to prevent memory leaks
   - Manual handling of connection pool
 
-23. JDBC with spring-boot -> Spring-boot provides JDBCTemplate class which helps to remove all boilerplate code.
+23. JDBC with spring-boot -> Spring-boot provides JDBCTemplate class(Spring abstraction on top of JDBC using Template Design Pattern) which helps to remove all boilerplate code when we were using raw JDBC.
+```text
+            Your Code
+               ↓
+            JdbcTemplate        ← orchestrates JDBC usage
+               ↓
+            JDBC API            ← interfaces
+               ↓
+            JDBC Driver         ← implementation
+               ↓
+            Database
+```
 ```java
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -431,29 +446,159 @@ JdbcTemplate takes care of all connection establishing, running insert and read 
     - no caching : ORM -> @Cacheable
     - no inheritance mapping : ORM -> @Inheritance
 
-25. To use JPA -> add jpa-starter dependency in pom, then create entities, create repositories, create service and controllers. Below is the internal architecture of JPA ![JPA Architecture](src/main/resources/images/JPA-Architecture.png)
-The persistence unit stores DB configs (driver, URL, username, password, dialect, etc.) and entity mapping info. Using that, an EntityManagerFactory is created, which in turn produces EntityManagers(EM) for that data source. Whenever we need to interact with DB for CRUD operation, we need EM. Each EM creates it's persistence context. This persistence context holds actual entities and helps in first level caching. In repository, we call find(), findAll() methods, which internally calls EM methods. Below is the complete flow
+```text
+            Your Code
+               ↓
+         Hibernate / JPA     ← ORM + mapping + unit of work
+               ↓
+            JDBC APIs
+               ↓
+         Database Driver
+               ↓
+         Actual Database
+```
+JDBC does not provide
+    ❌Automatic entity mapping
+    ❌ Relationship handling (@OneToMany, @OneToOne)
+    ❌ Object graph loading
+    ❌ Lazy loading
+    ❌ Dirty checking
+    ❌ Persistence context (1st-level cache)
+    ❌ Unit of Work
+    ❌ Cascades
+    ❌ Inheritance mapping
+    ❌ Second-level cache
+    ❌ JPQL / Criteria
+    ❌ Transparent transactions at object level
+
+Hibernate provides
+    ✔ Automatic ResultSet → Object mapping
+    ✔ Entity state management (managed / detached)
+    ✔ Dirty checking (auto update generation)
+    ✔ Unit of Work (persistence context)
+    ✔ Identity map (no duplicate objects)
+    ✔ Relationship handling (@OneToMany, etc.)
+    ✔ Lazy loading & proxies
+    ✔ Cascading operations
+    ✔ JPQL / HQL / Criteria API
+    ✔ Database-vendor abstraction (Dialect)
+    ✔ First-level cache
+    ✔ Optional second-level cache
+    ✔ Inheritance mapping
+    ✔ Transaction integration
+    ✔ Batch processing support
+```text
+        Hibernate (for CRUD + domain logic)
+        JdbcTemplate (for reports / batch / complex queries)
+```
+
+25. To use JPA -> add jpa-starter dependency in pom(this pulls in JPA APIs(specification only) + Spring Data JPA(provides JPARepository, repository proxies, method-name query derivation, pagination and sorting etc.) + a JPA provider (Hibernate by default) along with transaction and ORM infrastructure). Below is the internal architecture of JPA ![JPA Architecture](src/main/resources/images/JPA-Architecture.png)
+```text
+            ┌────────────────────────────────────────────┐
+            │               Your Code                    │
+            │  @Service, @Controller, Business Logic     │
+            └────────────────────────────────────────────┘
+                                ↓
+            ┌────────────────────────────────────────────┐
+            │           Spring Data JPA                  │
+            │  - Repository Proxies                      │
+            │  - Method-name query derivation            │
+            │  - Pagination / Sorting / Specs            │
+            └────────────────────────────────────────────┘
+                                ↓
+            ┌────────────────────────────────────────────┐
+            │               JPA API                      │
+            │  - @Entity, @OneToMany                     │
+            │  - EntityManager                           │
+            │  - Persistence Context contract            │
+            │  (Specification ONLY, no implementation)   │
+            └────────────────────────────────────────────┘
+                                ↓
+            ┌────────────────────────────────────────────┐
+            │         Hibernate (JPA Provider)           │
+            │  - ORM engine                              │
+            │  - Dirty checking                          │
+            │  - SQL generation                          │
+            │  - Dialect handling                        │
+            │  - 1st / 2nd level cache                   │
+            │  - Session / Unit of Work                  │
+            └────────────────────────────────────────────┘
+                                ↓
+            ┌────────────────────────────────────────────┐
+            │               JDBC API                     │
+            │  - Connection                              │
+            │  - PreparedStatement                       │
+            │  - ResultSet                               │
+            │  (Interfaces only)                         │
+            └────────────────────────────────────────────┘
+                                ↓
+            ┌────────────────────────────────────────────┐
+            │             JDBC Driver                    │
+            │  - MySQL / Postgres / Oracle driver        │
+            │  - Wire protocol                           │
+            │  - Vendor-specific implementation          │
+            └────────────────────────────────────────────┘
+                                ↓
+            ┌────────────────────────────────────────────┐
+            │               Database                     │
+            │  - Query parsing                           │
+            │  - Execution plan                          │
+            │  - Storage engine                          │
+            └────────────────────────────────────────────┘
+```
+Spring Data JPA - eliminates boilerplate DAO code, Without Spring Data JPA, you would manually write repository classes and wire EntityManager everywhere
+
+JPA APIs - standardize ORM behavior across Java, decouple application code from a specific ORM vendor, defines what ORM should do, not how.
+
+Hibernate (JPA Provider / ORM Engine) - implement the JPA specification, bridge object-oriented models with relational databases, JDBC works with rows and columns, hibernate lets you work with objects and relationships.
+
+JDBC APIs - provide a standard database access API in Java, avoid DB-vendor-specific code in applications, it is the lowest common contract every Java DB solution relies on.
+
+JDBC Driver - implement JDBC APIs for a given database, translate JAVA calls into database wire protocol.
+
+How JPA works internally -> The Persistence Unit (PU) stores database configuration (driver, URL, username, password, dialect, etc.) along with entity mapping metadata. Hibernate (as the JPA provider) reads the persistence unit configuration during application startup. Using this configuration, an EntityManagerFactory (EMF) is created. Internally, this corresponds to Hibernate’s SessionFactory. Spring Boot autoconfigures and manages the lifecycle of the EMF, while Hibernate provides the actual implementation. The EntityManagerFactory produces EntityManager (EM) instances.
+Whenever the application needs to interact with the database for CRUD operations, it does so via an EntityManager. Each EntityManager is associated with a Persistence Context, which:
+  - holds managed entity instances 
+  - provides first-level (L1) caching 
+  - performs dirty checking and change tracking
+
+Below is the complete flow
 ```text
          findById(1)
-            → Repository Proxy -> Implementation class for @Repository marked interfaces.
-                          It has implementations for all methods. It has pointer to correct EM
-                          which is created by Dispatcher Servlet during HTTP request interception.
-            → <<EntityManager>> -> entityManager.find(User.class, 1)
-            → Hibernate Session(implementation for EM methods) -> HibernateSession.find()
-            → Persistence Context (check 1st-level cache, if data is present, return it)
-            → generate JPQL/HQL (if using method-derived or JPQL query)
-            → JPQL/HQL → SQL AST → Dialect → Vendor SQL
-                    (Dialect adapts SQL to vendor e.g. MySQL, Postgres, Oracle)
-            → JDBC API -> PreparedStatement ps = connection.prepareStatement(sql);
-                          ps.setLong(1, 1)
-                          ResultSet rs = ps.executeQuery()
-            → JDBC Driver -> converts executeQuery() to vendor wire protocol (MySQL, Postgres, Oracle)
+            → Repository Proxy
+                -> Runtime-generated implementation of the @Repository interface
+                -> Holds a reference to the correct EntityManager
+                -> Proxy is created once at application startup
+            → EntityManager.find(User.class, 1)
+            → Hibernate Session (Hibernate’s implementation of EntityManager)
+                -> Session.find()
+            → Persistence Context
+                -> Check 1st-level cache
+                -> If entity exists, return it immediately
+            → SQL generation phase
+                -> (For non-PK queries: JPQL/HQL parsing)
+                -> SQL AST creation
+                -> Dialect applied to generate vendor-specific SQL
+            → JDBC API
+                -> PreparedStatement ps = connection.prepareStatement(sql)
+                -> ps.setLong(1, 1)
+                -> ResultSet rs = ps.executeQuery()
+            → JDBC Driver
+                -> Converts JDBC calls to database-specific wire protocol
             → Database
             ← ResultSet
-            ← map to Entity -> User(id=1, name="Bhaskar Sharan")
-            ← return entity
+            ← Hibernate hydrates entity
+                -> User(id=1, name="Bhaskar Sharan")
+            ← Entity returned to caller
 ```
-For all the @Repository, spring-boot created proxies. Spring Data uses proxies so that interfaces without implementations can have working persistence logic, transaction wrapping, query derivation, and AOP functionality without requiring boilerplate code. Proxies are generated once at application startup and registered as beans. This is the reason we never have to provide implementation classes for @Repository. Between Hibernate and JDBC, there is a Dialect which helps them talk to each other.
+For every @Repository interface, Spring Data JPA creates a proxy implementation at application startup and registers it as a Spring bean. These proxies provide:
+  - persistence logic delegation 
+  - transaction participation 
+  - query derivation from method names 
+  - exception translation 
+  - AOP integration
+
+This is why developers never need to write concrete implementation classes for repository interfaces. The Dialect is used by Hibernate during SQL generation, not during JDBC execution. Hibernate generates SQL based on entity metadata. The Dialect adapts this SQL to be database-vendor specific. JDBC simply executes the final SQL. Dialect sits inside Hibernate’s SQL generation phase, not between Hibernate and JDBC as a communication layer.
 
 26. Persistence Unit -> Logical grouping of all entity who shares same config(means who all are stored in same DB). If we are not using spring-boot we would create a persistence.xml file which holds all config related information. If we have 1 DB, we can use application.properties. ![Persistence.xml](src/main/resources/images/Persistence-Unit.png)
 
