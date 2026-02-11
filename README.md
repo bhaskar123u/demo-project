@@ -438,13 +438,13 @@ spring.jpa.hibernate.ddl-auto=update
 ```
 JdbcTemplate takes care of all connection establishing, running insert and read query, closing DB connections etc. It throws granular level of exceptions for better debugging. Default HikariDataSource is used and it provides inbuilt HikariCP. If we want to use some different datasource, it can be used in a Config class.
 
-24. Why ORM? ORM allows us to work with objects. Acts as bridge between java objects and database tables. With JDBC we still have
-    - manual object mapping(resultset -> objects) : ORM -> @Entity, @Column
-    - manual join handling : ORM -> @JoinColumn, @OneToMany, @ManyToOne
-    - no notion of object graph/domain model
-    - no change tracking
-    - no caching : ORM -> @Cacheable
-    - no inheritance mapping : ORM -> @Inheritance
+24. JdbcTemplate still doesn't have automatic object mapping, caching, domain modeling, object graph management, relationship handling, hence to improve all these issues Hibernate was introduced. Why ORM? ORM allows us to work with objects. Acts as bridge between java objects and database tables. With JDBC, we still have
+  - manual object mapping(resultset -> objects) : ORM -> @Entity, @Column
+  - manual join handling : ORM -> @JoinColumn, @OneToMany, @ManyToOne
+  - no notion of object graph/domain model
+  - no change tracking
+  - no caching : ORM -> @Cacheable
+  - no inheritance mapping : ORM -> @Inheritance
 
 ```text
             Your Code
@@ -457,42 +457,49 @@ JdbcTemplate takes care of all connection establishing, running insert and read 
                ↓
          Actual Database
 ```
-JDBC does not provide
-    ❌Automatic entity mapping
-    ❌ Relationship handling (@OneToMany, @OneToOne)
-    ❌ Object graph loading
-    ❌ Lazy loading
-    ❌ Dirty checking
-    ❌ Persistence context (1st-level cache)
-    ❌ Unit of Work
-    ❌ Cascades
-    ❌ Inheritance mapping
-    ❌ Second-level cache
-    ❌ JPQL / Criteria
-    ❌ Transparent transactions at object level
+But, JDBC does not provide
+  - Automatic entity mapping
+  - Relationship handling (@OneToMany, @OneToOne)
+  - Object graph loading
+  - Lazy loading
+  - Dirty checking
+  - Persistence context (1st-level cache)
+  - Unit of Work
+  - Cascades
+  - Inheritance mapping
+  - Second-level cache
+  - JPQL / Criteria
+  - Transparent transactions at object level
 
 Hibernate provides
-    ✔ Automatic ResultSet → Object mapping
-    ✔ Entity state management (managed / detached)
-    ✔ Dirty checking (auto update generation)
-    ✔ Unit of Work (persistence context)
-    ✔ Identity map (no duplicate objects)
-    ✔ Relationship handling (@OneToMany, etc.)
-    ✔ Lazy loading & proxies
-    ✔ Cascading operations
-    ✔ JPQL / HQL / Criteria API
-    ✔ Database-vendor abstraction (Dialect)
-    ✔ First-level cache
-    ✔ Optional second-level cache
-    ✔ Inheritance mapping
-    ✔ Transaction integration
-    ✔ Batch processing support
+  - Automatic ResultSet → Object mapping
+  - Entity state management (managed / detached)
+  - Dirty checking (auto update generation)
+  - Unit of Work (persistence context)
+  - Identity map (no duplicate objects)
+  - Relationship handling (@OneToMany, etc.)
+  - Lazy loading & proxies
+  - Cascading operations
+  - JPQL / HQL / Criteria API
+  - Database-vendor abstraction (Dialect)
+  - First-level cache
+  - Optional second-level cache
+  - Inheritance mapping
+  - Transaction integration
+  - Batch processing support
 ```text
         Hibernate (for CRUD + domain logic)
         JdbcTemplate (for reports / batch / complex queries)
 ```
 
-25. To use JPA -> add jpa-starter dependency in pom(this pulls in JPA APIs(specification only) + Spring Data JPA(provides JPARepository, repository proxies, method-name query derivation, pagination and sorting etc.) + a JPA provider (Hibernate by default) along with transaction and ORM infrastructure). Below is the internal architecture of JPA ![JPA Architecture](src/main/resources/images/JPA-Architecture.png)
+25. Hibernate was vendor specific and switching to different ORM provider was becoming difficult, hence JPA was introduced. JPA is a specification(interfaces + annotations). Hibernate is an implementation. Applications should depend on the JPA abstraction and let Hibernate act as the underlying provider. This keeps the codebase clean, portable, and maintainable. Below are the JPA imports which should be used.
+```java
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.OneToMany;
+```
+To use JPA -> add jpa-starter dependency in pom(this pulls in JPA APIs(specification only) + Spring Data JPA(provides JPARepository, repository proxies, method-name query derivation, pagination and sorting etc.) + a JPA provider (Hibernate by default) along with transaction and ORM infrastructure). Below is the internal architecture of JPA ![JPA Architecture](src/main/resources/images/JPA-Architecture.png)
 ```text
             ┌────────────────────────────────────────────┐
             │               Your Code                    │
@@ -555,6 +562,7 @@ Hibernate (JPA Provider / ORM Engine) - implement the JPA specification, bridge 
 JDBC APIs - provide a standard database access API in Java, avoid DB-vendor-specific code in applications, it is the lowest common contract every Java DB solution relies on.
 
 JDBC Driver - implement JDBC APIs for a given database, translate JAVA calls into database wire protocol.
+
 
 How JPA works internally -> The Persistence Unit (PU) stores database configuration (driver, URL, username, password, dialect, etc.) along with entity mapping metadata. Hibernate (as the JPA provider) reads the persistence unit configuration during application startup. Using this configuration, an EntityManagerFactory (EMF) is created. Internally, this corresponds to Hibernate’s SessionFactory. Spring Boot autoconfigures and manages the lifecycle of the EMF, while Hibernate provides the actual implementation. The EntityManagerFactory produces EntityManager (EM) instances.
 Whenever the application needs to interact with the database for CRUD operations, it does so via an EntityManager. Each EntityManager is associated with a Persistence Context, which:
