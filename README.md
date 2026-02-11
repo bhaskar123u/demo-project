@@ -492,14 +492,19 @@ Hibernate provides
         JdbcTemplate (for reports / batch / complex queries)
 ```
 
-25. Hibernate was vendor specific and switching to different ORM provider was becoming difficult, hence JPA was introduced. JPA is a specification(interfaces + annotations). Hibernate is an implementation. Applications should depend on the JPA abstraction and let Hibernate act as the underlying provider. This keeps the codebase clean, portable, and maintainable. Below are the JPA imports which should be used.
+25. Hibernate was vendor specific and applications that used Hibernate directly became tightly coupled to it. Switching to a different ORM provider was difficult. To solve this problem, JPA (Java Persistence API) was introduced. JPA is a specification (interfaces + annotations). Hibernate is an implementation of this specification. Applications should depend on the JPA abstraction and let Hibernate act as the underlying provider. This keeps the codebase clean, portable, and maintainable. Below are some of the JPA imports which should be used:
+
 ```java
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.OneToMany;
 ```
-To use JPA -> add jpa-starter dependency in pom(this pulls in JPA APIs(specification only) + Spring Data JPA(provides JPARepository, repository proxies, method-name query derivation, pagination and sorting etc.) + a JPA provider (Hibernate by default) along with transaction and ORM infrastructure). Below is the internal architecture of JPA ![JPA Architecture](src/main/resources/images/JPA-Architecture.png)
+To use JPA in a Spring Boot application, add the spring-boot-starter-data-jpa dependency. This starter pulls in JPA APIs (specification only), Spring Data JPA (provides JpaRepository, repository proxies, method-name query derivation, pagination, sorting, specifications, etc.), a JPA provider (Hibernate by default), and transaction and ORM infrastructure.
+
+Below is the internal architecture of JPA:
+![JPA Architecture](src/main/resources/images/JPA-Architecture.png)
+
 ```text
             ┌────────────────────────────────────────────┐
             │               Your Code                    │
@@ -553,26 +558,26 @@ To use JPA -> add jpa-starter dependency in pom(this pulls in JPA APIs(specifica
             │  - Storage engine                          │
             └────────────────────────────────────────────┘
 ```
-Spring Data JPA - eliminates boilerplate DAO code, Without Spring Data JPA, you would manually write repository classes and wire EntityManager everywhere
 
-JPA APIs - standardize ORM behavior across Java, decouple application code from a specific ORM vendor, defines what ORM should do, not how.
+Spring Data JPA eliminates boilerplate DAO code. Without Spring Data JPA, developers would need to manually write repository implementations and wire EntityManager everywhere.
 
-Hibernate (JPA Provider / ORM Engine) - implement the JPA specification, bridge object-oriented models with relational databases, JDBC works with rows and columns, hibernate lets you work with objects and relationships.
+JPA APIs standardize ORM behavior across Java and decouple application code from a specific ORM vendor. JPA defines what an ORM should do, not how it should do it.
 
-JDBC APIs - provide a standard database access API in Java, avoid DB-vendor-specific code in applications, it is the lowest common contract every Java DB solution relies on.
+Hibernate implements the JPA specification and bridges object-oriented domain models with relational databases. JDBC works with rows and columns, while Hibernate allows developers to work with objects and relationships.
 
-JDBC Driver - implement JDBC APIs for a given database, translate JAVA calls into database wire protocol.
+JDBC APIs provide a standard database access API in Java and avoid database-vendor-specific code. JDBC is the lowest common contract every Java database solution relies on.
 
+JDBC drivers implement JDBC APIs for a given database and translate Java calls into database-specific wire protocol.
 
-How JPA works internally -> The Persistence Unit (PU) stores database configuration (driver, URL, username, password, dialect, etc.) along with entity mapping metadata. Hibernate (as the JPA provider) reads the persistence unit configuration during application startup. Using this configuration, an EntityManagerFactory (EMF) is created. Internally, this corresponds to Hibernate’s SessionFactory. Spring Boot autoconfigures and manages the lifecycle of the EMF, while Hibernate provides the actual implementation. The EntityManagerFactory produces EntityManager (EM) instances.
-Whenever the application needs to interact with the database for CRUD operations, it does so via an EntityManager. Each EntityManager is associated with a Persistence Context, which:
-  - holds managed entity instances 
-  - provides first-level (L1) caching 
-  - performs dirty checking and change tracking
+How JPA works internally: The Persistence Unit (PU) stores database configuration (driver, URL, username, password, dialect, etc.) along with entity mapping metadata. Hibernate (as the JPA provider) reads the persistence unit configuration during application startup. Using this configuration, an EntityManagerFactory (EMF) is created. Internally, this is Hibernate’s SessionFactory. Spring Boot autoconfigures and manages the lifecycle of the EMF, while Hibernate provides the actual implementation. The EntityManagerFactory produces EntityManager instances. Whenever the application needs to interact with the database for CRUD operations, it does so via an EntityManager. Each EntityManager is associated with a Persistence Context, which:
 
-Below is the complete flow
+* holds managed entity instances
+* provides first-level (L1) caching
+* performs dirty checking and change tracking
+
+Below is the complete flow, assuming we hit a findById(1) method:
 ```text
-         findById(1)
+        findById(1)
             → Repository Proxy
                 -> Runtime-generated implementation of the @Repository interface
                 -> Holds a reference to the correct EntityManager
@@ -599,16 +604,31 @@ Below is the complete flow
                 -> User(id=1, name="Bhaskar Sharan")
             ← Entity returned to caller
 ```
-For every @Repository interface, Spring Data JPA creates a proxy implementation at application startup and registers it as a Spring bean. These proxies provide:
-  - persistence logic delegation 
-  - transaction participation 
-  - query derivation from method names 
-  - exception translation 
-  - AOP integration
+For every @Repository interface, Spring Data JPA creates a JpaRepositoryFactory during application startup. This factory is responsible for creating repository implementations, wiring the EntityManager, and generating query logic. Spring then generates a proxy class at runtime (for example, UserRepository$$Proxy). The proxy implements UserRepository and JpaRepository and intercepts all method calls. Proxies are injected with the EntityManager, query metadata, and method mappings. Spring Data inspects every method in UserRepository and builds metadata for each method.
+```text
+Method            Category
+--------------------------
+findById          CRUD (from JpaRepository)
+save              CRUD
+findByEmail       Derived Query
+existsByEmail     Derived Exists Query
+```
+For methods like findByEmail, Spring Data parses the method name (find → SELECT, ByEmail → WHERE email = ?) and internally builds a JPQL query like:
+```sql
+select u from User u where u.email = :email
+```
+All derived queries and method metadata are cached, so parsing does not happen on every invocation. These repository proxies provide:
+* persistence logic delegation
+* transaction participation
+* query derivation from method names
+* exception translation
+* AOP integration
 
-This is why developers never need to write concrete implementation classes for repository interfaces. The Dialect is used by Hibernate during SQL generation, not during JDBC execution. Hibernate generates SQL based on entity metadata. The Dialect adapts this SQL to be database-vendor specific. JDBC simply executes the final SQL. Dialect sits inside Hibernate’s SQL generation phase, not between Hibernate and JDBC as a communication layer.
+Hibernate then parses the query, builds an abstract syntax tree, applies the dialect, generates SQL, and hands execution over to the JDBC APIs. The dialect is used by Hibernate during SQL generation, not during JDBC execution. Hibernate generates SQL based on entity metadata, and the dialect adapts this SQL to be database-vendor specific. JDBC simply executes the final SQL.
 
-26. Persistence Unit -> Concept defined by JPA. Logical grouping of all entity who shares same config(means who all are stored in same DB). PU = configuration + metadata + runtime infrastructure. If we are not using spring-boot we would create a persistence.xml file which holds all config related information. If we have 1 DB, we can use application.properties. ![Persistence.xml](src/main/resources/images/Persistence-Unit.png)
+26. Persistence Unit -> Concept defined by JPA, it is everything Hibernate needs to know to build the ORM engine. Once it is built PU is not actively involved then. Logical grouping of all entity who shares same config(means who all are stored in same DB). PU = configuration + metadata + runtime infrastructure (Database / infrastructure information + ORM / entity mapping information). If we are not using spring-boot we would create a persistence.xml file which holds all config related information. If we have 1 DB, we can use application.properties
+
+![Persistence.xml](src/main/resources/images/Persistence-Unit.png)
 ```text
         JVM process starts (class loads)
              ↓
@@ -636,29 +656,179 @@ Example:
   - PU3 → PostgreSQL
 All inside one JVM.
 
-27. With each PU, spring-boot creates one EntityManagerFactory and one TransactionManager.
-```text
-+------+   +------+   +------+   +----------+
-| PU1  | → | EMF1 | → | TM1  | → |   H2 DB  |
-+------+   +------+   +------+   +----------+
+27. SINGLE PU – SINGLE DATABASE : One service → one database
 
-+------+   +------+   +------+   +-----------+
-| PU2  | → | EMF2 | → | TM2  | → | MySQL DB  |
-+------+   +------+   +------+   +-----------+
-```
-But in case of distributed transactions, only one TM is created
-```text
-+------+   +------+         +------------------+
-| PU1  | → | EMF1 | ------->|                  |
-+------+   +------+         |                  |
-                            |   TM (JTA/XA)    | --→ H2 DB, MYSQL DB
-+------+   +------+         |                  |
-| PU2  | → | EMF2 | ------->|                  |
-+------+   +------+         +------------------+
-```
-JTA transaction manager does 2PC. Manages transactions across multiple DBs. All of these happens during application startup.
+```application.properties
+spring.datasource.url=jdbc:postgresql://user-db:5432/userdb
+spring.datasource.username=user_app
+spring.datasource.password=********
+spring.datasource.driver-class-name=org.postgresql.Driver
 
-28. Entity Life Cycle. It is managed in PC. When we issue a command such as save() or delete(), at first it is stored in managed persistence. At some point when commit(flush()) command is issued then only the entities gets save in DB.  ![Entity-Lifecycle](src/main/resources/images/Entity-Lifecycle.png)
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.hibernate.ddl-auto=validate
+spring.jpa.show-sql=false
+```
+
+What happens
+* One implicit Persistence Unit is created
+* One EntityManagerFactory is created
+* One JpaTransactionManager is created
+* All repositories use the same EM and TM
+
+MULTIPLE PU – MULTIPLE DATABASES (NO DISTRIBUTED TRANSACTIONS) : One service → multiple databases, transactions do NOT span databases. Example : Reporting service, Orders DB (MySQL), Analytics DB (Postgres)
+```text
+            +------+   +------+   +------+   +----------+
+            | PU1  | → | EMF1 | → | TM1  | → |   H2 DB  |
+            +------+   +------+   +------+   +----------+
+            
+            +------+   +------+   +------+   +-----------+
+            | PU2  | → | EMF2 | → | TM2  | → | MySQL DB  |
+            +------+   +------+   +------+   +-----------+
+```
+```application.properties
+# Orders DB
+spring.datasource.orders.url=jdbc:mysql://orders-db:3306/orders
+spring.datasource.orders.username=orders_app
+spring.datasource.orders.password=********
+spring.datasource.orders.driver-class-name=com.mysql.cj.jdbc.Driver
+
+spring.jpa.orders.database-platform=org.hibernate.dialect.MySQLDialect
+spring.jpa.orders.hibernate.ddl-auto=validate
+
+
+# Analytics DB
+spring.datasource.analytics.url=jdbc:postgresql://analytics-db:5432/analytics
+spring.datasource.analytics.username=analytics_app
+spring.datasource.analytics.password=********
+spring.datasource.analytics.driver-class-name=org.postgresql.Driver
+
+spring.jpa.analytics.database-platform=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.analytics.hibernate.ddl-auto=validate
+```
+```java
+@Configuration
+@EnableJpaRepositories(
+        basePackages = "com.app.orders",
+        entityManagerFactoryRef = "ordersEmf",
+        transactionManagerRef = "ordersTm"
+)
+public class OrdersJpaConfig {
+}
+
+@Configuration
+@EnableJpaRepositories(
+        basePackages = "com.app.analytics",
+        entityManagerFactoryRef = "analyticsEmf",
+        transactionManagerRef = "analyticsTm"
+)
+public class AnalyticsJpaConfig {
+}
+```
+For each PU, you must also define: DataSource bean, EntityManagerFactory bean, TransactionManager bean. Example (orders):
+```java
+@Bean
+public LocalContainerEntityManagerFactoryBean ordersEmf() {  }
+
+@Bean
+public PlatformTransactionManager ordersTm() {  }
+```
+Same for analytics.
+
+What happens
+* PU1 → Orders entities → Orders EMF → Orders TM → MySQL
+* PU2 → Analytics entities → Analytics EMF → Analytics TM → Postgres
+* Transactions are isolated per DB
+
+MULTIPLE PU – SAME DATABASE (DIFFERENT SCHEMAS) : Same DB instance, different schemas / bounded contexts. Example : Auth schema + Billing schema in same Postgres DB
+```application.properties
+spring.datasource.url=jdbc:postgresql://main-db:5432/appdb
+spring.datasource.username=app_user
+spring.datasource.password=********
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.hibernate.ddl-auto=validate
+
+spring.jpa.properties.hibernate.default_schema=auth
+```
+
+Second PU config (Java-based, common in practice)
+```java
+@Bean
+public LocalContainerEntityManagerFactoryBean billingEmf() {
+    Map<String, Object> props = new HashMap<>();
+    props.put("hibernate.default_schema", "billing");
+    //...
+}
+```
+What happens
+* PU1 → auth schema entities
+* PU2 → billing schema entities
+* Same physical DB, different logical ownership
+
+MULTIPLE PU + SINGLE JTA TRANSACTION MANAGER (DISTRIBUTED TX) : Strong consistency across multiple databases, Legacy enterprise systems (banking, payments). Example : Oracle (accounts) + MySQL (ledger)
+```text
+            +------+   +------+   +--------------+
+            | PU1  | → | EMF1 | → | XA DataSource| --┐
+            +------+   +------+   +--------------+   |
+                                                       |
+                                                       v
+                                                  +------------------+
+                                                  |   JTA TM (2PC)   |
+                                                  +------------------+
+                                                       ^
+                                                       |
+            +------+   +------+   +--------------+   |
+            | PU2  | → | EMF2 | → | XA DataSource| --┘
+            +------+   +------+   +--------------+
+                             |
+                             +--> H2 DB, MySQL DB
+```
+```application.properties
+spring.jta.enabled=true
+
+# Oracle XA
+spring.datasource.oracle.xa.data-source-class-name=oracle.jdbc.xa.client.OracleXADataSource
+spring.datasource.oracle.xa.properties.url=jdbc:oracle:thin:@oracle-db:1521/ORCL
+spring.datasource.oracle.xa.properties.user=acct_user
+spring.datasource.oracle.xa.properties.password=********
+
+# MySQL XA
+spring.datasource.mysql.xa.data-source-class-name=com.mysql.cj.jdbc.MysqlXADataSource
+spring.datasource.mysql.xa.properties.url=jdbc:mysql://mysql-db:3306/ledger
+spring.datasource.mysql.xa.properties.user=ledger_user
+spring.datasource.mysql.xa.properties.password=********
+```
+JPA properties
+```properties
+spring.jpa.properties.hibernate.transaction.jta.platform=org.hibernate.engine.transaction.jta.platform.internal.NarayanaJtaPlatform
+spring.jpa.hibernate.ddl-auto=validate
+```
+What happens
+* PU1 → EMF1 → XA Oracle
+* PU2 → EMF2 → XA MySQL
+* ONE JTA TransactionManager
+* 2-phase commit at runtime
+
+MICROSERVICES (MODERN DEFAULT) : Each service has its own application.properties
+Order Service
+```properties
+spring.datasource.url=jdbc:mysql://orders-db:3306/orders
+spring.jpa.database-platform=org.hibernate.dialect.MySQLDialect
+```
+Payment Service
+```properties
+spring.datasource.url=jdbc:postgresql://payments-db:5432/payments
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+```
+What happens
+* Each service has exactly one PU
+* No JTA
+* No distributed transactions
+* Consistency handled via events / messaging
+
+28. Entity Life Cycle. It is managed in PC. When we issue a command such as save() or delete(), at first it is stored in managed persistence. At some point when commit(flush()) command is issued then only the entities gets save in DB.
+![Entity-Lifecycle](src/main/resources/images/Entity-Lifecycle.png)
 
 29. EntityManagerFactory -> It does expensive boot-time work:
     - scans all entities (@Entity classes)
@@ -742,9 +912,11 @@ Plus you get:
 ```
 30. First Level Caching - Done at persistence context layer. Can be seen in cases when we save the user and then fetches it again. Not in all cases we immediately write to DB, in that case whatever we save/update/read is served from PC only i.e., Level 1 cache. Internally hashmap is used for keeping data in PC.
 
-31. Second Level Caching (L2 caching) ![Second-Level-Caching](src/main/resources/images/Second-Level-Caching.png)
+31. Second Level Caching (L2 caching)
 
-32. To use this, we have to add dependency in pom.xml(ehcache, hibernate-jcache, cache-api), enable it via application.properties and then in entity like below
+![Second-Level-Caching](src/main/resources/images/Second-Level-Caching.png)
+
+To use this, we have to add dependency in pom.xml(ehcache, hibernate-jcache, cache-api), enable it via application.properties and then in entity like below
 ```application.properties
 spring.jpa.properties.hibernate.cache.use_second_level_cache=true
 spring.jpa.properties.hibernate.cache.region.factory_class=org.hibernate.cache.jcache.JCacheRegionFactory
@@ -778,7 +950,9 @@ public class UserDetails { }
     - Cache size
     - Concurrency strategy
 
-All these information can be put into ehcache.xml ![ehcache](src/main/resources/images/ehcache.png)
+All these information can be put into ehcache.xml
+
+![ehcache](src/main/resources/images/ehcache.png)
 
 34. CacheConcurrencyStrategy guides how operations like insert/update/delete impact the cache data. Types of concurrency strategies :
     - CacheConcurrencyStrategy.READ_ONLY (good for static data which is never updated)
@@ -806,7 +980,7 @@ import java.io.Serializable;
 @Table(name = "User",
         schema = "Onboarding",
         uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"name" / "email"}) // composite key constraints, both combined they should be unique
+                @UniqueConstraint(columnNames = {"name", "email"}) // composite key constraints, both combined they should be unique
         },
         indexes = {
                 @Index(name = "index_email", columnList = "email") // index on single column, we can also have composite index
@@ -814,9 +988,9 @@ import java.io.Serializable;
 @Entity
 public class User {
     @Id // unique, non-null, primary-key, applicable for single column
-    // @GeneratedValue(strategy = GenerationType.IDENTITY) // auto-increment, applicable for single column, IDENTITY is DB specific, we can use sequence instead
+    // @GeneratedValue(strategy = GenerationType.IDENTITY) // auto-increment, applicable for single column, IDENTITY is DB specific, we can also use sequence.
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "unique_user_seq")
-    @SequenceGenerator(name = "unique_user_seq", sequenceName = "db_seq_name", initialValue = 100, allocationSize = 5) // when this will start, db will fetch 5 values from db_seq_name and will store in hibernate, only when the 6th entry is made next set of sequence are fetched. Sequence is an atomic counter, no table is involved.
+    @SequenceGenerator(name = "unique_user_seq", sequenceName = "db_seq_name", initialValue = 100, allocationSize = 5) // when this will start, db will fetch 5 values from db_seq_name and will store in hibernate, only when the 6th entry is made next set of sequence are fetched. Sequence is an atomic counter, no table is involved. But if something crashes, it looses all prefetch values
     private long id;
     @Column(name = "email", unique = true, nullable = false, length = 255)
     private String email;
