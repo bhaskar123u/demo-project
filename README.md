@@ -1301,4 +1301,208 @@ Tables will look like User{user_id, ...} and Order{..., product_name, user_id_fk
 
 43. ManyToOne unidirectional :
 
-44.
+44. Derived Query : Create query from method. Need to follow some convention. Used for GET/REMOVE operations. Whatever we write after By becomes the where clause. We can see all these logic in Part.java
+```java
+Optional<User> findByEmail(String email);
+```
+When we write this function, what happens bts is
+```text
+            Repository Method
+                findByEmail(String email)
+                        ↓
+            Spring Data parses method name
+                        ↓
+            Builds JPQL:
+                select u from User u where u.email = :email
+                        ↓
+            Hibernate converts JPQL → SQL
+                        ↓
+            JDBC executes SQL
+```
+At application start all these DQ are parsed and cached, and at runtime these query are used. Assume entity:
+```java
+@Entity
+class User {
+    UUID id;
+    String name;
+    String email;
+    Integer age;
+    LocalDate dob;
+    Boolean active;
+    String country;
+}
+
+public interface UserRepository extends JpaRepository<User, UUID> {
+}
+```
+Few examples of all the derived query we can generate for this entity.
+```java
+List<User> findByNameAndEmail(String name, String email); // And
+
+List<User> findByNameOrEmail(String name, String email); // Or
+
+List<User> findByAgeBetween(Integer start, Integer end); // Between
+
+List<User> findByAgeLessThan(Integer age); // LessThan
+
+List<User> findByAgeGreaterThan(Integer age); // GreaterThan
+
+List<User> findByNameLike(String pattern); // Like
+
+List<User> findByNameContaining(String value); // Containing, auto adds %value%
+
+List<User> findByNameStartingWith(String prefix); // StartingWith
+
+List<User> findByNameEndingWith(String suffix); // EndingWith
+
+List<User> findByEmailIsNull(); // IsNUll
+
+List<User> findByEmailIsNotNull(); // IsNotNull
+
+List<User> findByActiveTrue(); // True
+
+List<User> findByActiveFalse(); // False
+
+List<User> findByCountryIn(List<String> countries); // In
+
+List<User> findByCountryNotIn(List<String> countries); // NotIn
+
+List<User> findByActiveTrueOrderByAgeDesc();
+
+User findTopByOrderByAgeDesc();
+
+User findFirstByActiveTrueOrderByDobAsc();
+
+boolean existsByEmail(String email);
+
+long countByActiveTrue();
+
+List<User> findByCountryAndAgeGreaterThanOrderByNameAsc(String country, Integer age); // combination
+```
+JPA also provides Pageable apis, we can create a page object and pass it in all these methods also, then the response will be paginated, page number and page size. For e.g.,
+
+```java
+import java.awt.print.Pageable;
+
+public List<User> findByName(String name) {
+    Pageable pageable = PageRequest.of(0,5,Sort.by("name").descending()); // sort will take field names of entity, it accepts multiple fields and the sorting is applied in the order the field names are provided
+    Page<User> userDetailsPaginated = userRepository.findByUser(name, pageable);
+    List<User> userList = userDetailsPaginated.getContent();
+    reutrn userList;
+}
+```
+If we want custom sorting we can pass a sort object in the same derived method as follows
+```java
+Sort sort = Sort.by(
+        Sort.Order.adc("firstName"),
+        Sort.Order.desc("LastName")
+);
+```
+
+45. JPQL : For complex queries, which DQ can't handle, we use JPQL. It is similar to SQL but for entity object instead of database. It understands the class name, field name not sql column. It is DB independent.
+```java
+@Query("Select u.name, u.email from User u where u.name = :userFirstName")
+List<User> findUserWithName(@Param("userFirstName")String userName); // this method name can be anything
+```
+For join queries, we don't need to specify ON, internally JPA knows how the entity are related and hence it creates proper SQL for that. For e.g.,
+```java
+import org.springframework.stereotype.Repository;
+
+@Entity
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long id;
+    private String name;
+    private String phone;
+
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(
+            name = "address_id", // FK
+            nullable = false,
+            unique = true
+    )
+    private Address address;
+    // getters and setters
+}
+
+// User{id(PK), name, phone, address_id}
+public class Address {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long id;
+    private String city;
+    private String state;
+    private String pinCode;
+}
+// Address{id(PK), city, state, pinCode}
+@Repository
+public interface UserRepository extends JPARepository<User, long>{
+    @Query("Select u from User u JOIN u.address ua where u.name = :userFirstName")
+    List<User> findUserWithName(@Param("userFirstName")String userName);
+}
+```
+Assume we have to return some fields from user and some from address, we can write something like this
+```java
+    @Query("Select u.name, ua.city from User u JOIN u.address ua where u.name = :userFirstName")
+    List<Object[]> findUserWithName(@Param("userFirstName")String userName);
+```
+We can then run a for loop on this and convert in some desired DTO, or we can directly write in the query itself like below
+```java
+    @Query("Select new com.bsharan.....UserDTO(u.name, ua.city) from User u JOIN u.address ua where u.name = :userFirstName")
+    List<UserDTO> findUserWithName(@Param("userFirstName")String userName);
+```
+If we have to join multiple tables, we can write as below
+```java
+    @Query("Select a from A a JOIN a.bList b JOIN b.cList c WHERE c.someProperty = :someValue")
+    List<A> findAWithBAndC(@Param("someValue")String someValue);
+```
+
+46. N+1 Problem with OneToMany or ManyToMany : Assume we have a OneToMany relationship, the entity definition and query remain the same. Now we have N parent and all parent have some children. If we hit a query which matches multiple parent then, first there is a query to fetch all parent, next N queries to fetch children for all those parent. Hence, we have 1+N queries fired total. In a distributed env this is too much load on DB server. EAGER fetch only works when we have a single parent, and it may have multiple children, in that case it loads everything EAGERLY.
+
+Solution :
+  - use JOIN FETCH (Select u from User u JOIN FETCH u.address ua where u.name = :userFirstName) - makes 1 query
+  - use @BatchSize(size=10), it still makes 1 query to get all parent, but then batches the child fetch.
+  - use @EntityGraph
+
+47. @Modifying : By default, JPQL assume we are running a select query, but if we are running a delete query, we have to explicitly mention it. This annotation tells JPA to expect a INSERT/DELETE/UPDATE query.
+
+48. Flush, Clear : Flush pushes the PC changes to DB and the value is still hold in PC. Clear purge the PC and require fresh DB call.
+
+50. @NamedQuery : Name a query to re-use it. In repository classes, we can use the same query.
+
+51. NativeQuery :  Plain SQL queries, interact directly with databases, if in future some table changes, we have to change this as well. No caching, lazy loading or entity life-cycle management. Used when we have a complex query that can't be handled otherwise by JPQL. Little faster as it doesn't have to deal with PC updates. It can fetch non-entity results like count(*) which can't be done in JPQL.
+```java
+    @Query("Select * from User u GROUPBY u.city HAVING city = :userCity", nativeQuery = true) // all here is DB, table name, column name etc
+    List<User> findAllUserInACity(@Param("userCity")String userCity);
+```
+For *, all fields are mapped to a particular entity. But if we are returning partial fields suppose only name and phone, we need to do a manual mapping. We can use @SqlResultSetMapping and @NamedNativeQuery annotations for it or a manual mapping. For e.g.,
+```java
+@Entity
+@NamedNativeQuery(
+        name = "user.getUserByName",
+        query = "select name, phone FROM user where name = :userName",
+        resultSetMapping = "userDtoMapping"
+)
+@SqlResultSetMapping(
+        name = "userDtoMapping",
+        classes = @ConstructorResult(
+                targetClass = UserDto.class,
+                columns = {
+                        @ColumnResult(name="name", type = String.class),
+                        @ColumnResult(name="phone", type = String.class)
+                }
+        )
+)
+public class User{
+    
+}
+```
+
+52. Dynamic Native Query : No Repository class, we build the query in service class only based on whatever we have got in request params. We use stringBuilder to dynamically build the query for where clause then, we pass this to the entityManager. It then gives us a query object which looks something like this
+```sql
+select user.name, user.email from user where user.name = ? and user.id = ? limit ? offset ?
+```
+We then iterate over this and replace all ? with data, then we execute the query. Since we are using stringBuilder to create the query, we can also add pagination parameters like offset, limit and execute accordingly.
+
+53. Criteria API : JPA managed, works with entity and support dynamic query, allow us to build dynamic, type-safe query with raw SQL. CriteriaBuilder is used to create the full query and that is passed to EM which actually executes it.
