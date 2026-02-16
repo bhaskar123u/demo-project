@@ -1045,7 +1045,7 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
     @OneToOne(cascade = CascadeType.ALL)
-    private PassportDetails passportDetails;
+    private PassportDetails passportDetails; // this field will be appended with _ID if we don't provide a column name
     private String email;
 }
 @Entity
@@ -1060,7 +1060,7 @@ public class PassportDetails {
     private Date validTill;
 }
 ```
-What happens internally, in the table User, it creates a foreign key which is PK of another table. How internally table will look like is User --> {id,passport_details_id(FK),email} and PassportDetails --> {id, email, authorisedTo, issuerCountry, issuedOn, validTill}. But if we need more control, we can use @JoinColumn.
+What happens internally, in the table User, it creates a foreign key which is PK of another table. How internally table will look like is User --> {id,passport_details_id(FK),email} and PassportDetails --> {id, email, authorisedTo, issuerCountry, issuedOn, validTill}. But if we need more control, we can use @JoinColumn. If there is a need to specifically mention what key is PK or the joinColumn name etc.
 ```java
 import jakarta.persistence.JoinColumn;
 
@@ -1070,7 +1070,7 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
     @OneToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "passport_id", referencedColumnName = "id")
+    @JoinColumn(name = "passport_id", referencedColumnName = "id") // private long id must be present in another class
     private PassportDetails passportDetails;
 }
 ```
@@ -1114,7 +1114,8 @@ public class User {
     private long id;
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumns({
-            @JoinColumn(name = "passport_id", referencedColumnName = "id"), // these are all FK in User table
+            // these are all FK in User table
+            @JoinColumn(name = "passport_id", referencedColumnName = "id"),
             @JoinColumn(name = "passport_email", referencedColumnName = "email"),
             @JoinColumn(name = "passport_authorisedTo", referencedColumnName = "authorisedTo")
     })
@@ -1123,17 +1124,181 @@ public class User {
 ```
 In this case the table for user will look like User --> {id,passport_id(FK),passport_email(FK),passport_authorisedTo(FK)}.
 
-37. Cascade types :
-    - CascadeType.PERSIST : Inserting parent automatically insert the child entities, only effecting during first time insert.
+37. Cascade types : Without cascade type any operation on parent do not affect child entity.
+    - CascadeType.PERSIST : Inserting parent automatically insert the child entities, only effecting during first time insert. After it if we are updating the resource using a PutMapping and even if CascadeType.PERSIST is used, the update won't happen.
     - CascadeType.MERGE : Updating parent entity updates child entity too. We can pass multiple cascadeType as -> @OneToOne(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     - CascadeType.REMOVE : Deleting parent entity deletes the child entity also.
     - CascadeType.REFRESH : If we use this parent as well as child entity are loaded directly from DB, not PC is involved.
     - CascadeType.ALL : Capability of all types.
 
-
-38. Lazy and Eager loading : Child entities are loaded either at the same time, or on use basis. We can configure this as well. Eager loading is default for @OneToOne and @ManyToOne. Generally it does a left join on parent entity and extract the child entity details. Eager loading is default for @OneToMany and @ManyToMany. We can add required config for this as shown below :
+38. Lazy and Eager loading : Child entities are loaded either at the same time, or on use basis. We can configure this as well. Eager loading is default for @OneToOne and @ManyToOne. For EAGER loading, there is a left join on parent entity and extract the child entity details. Eager loading is default for @OneToMany and @ManyToMany. We can add required config for this as shown below :
 ```java
 @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
 public PassportDetails passportDetails;
 ```
-39. 
+39. OneToOne bidirectional : Both hold reference to each other. Parent has a reference to Child. Child also has a reference to parent but only in object not in DB table. Table has only one FK in Parent. Owner side - the side owning the relationship(FK) and inverse side is the side where no FK in present in table.
+```java
+import jakarta.persistence.*;
+
+@Entity
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long id;
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "passport_id", referencedColumnName="id")
+    private PassportDetails passportDetails;
+    private String email;
+}
+@Entity
+public class PassportDetails {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long id;
+    private String email;
+    private String authorisedTo;
+    private String issuerCountry;
+    private Date issuedOn;
+    private Date validTill;
+    
+    @OneToOne(mappedBy="passportDetails", fetchType=FetchType.LAZY) // mappedBy is the field name in another class giving backwork capability, in table no FK is present
+    private User user;
+}
+```
+Bidirectional mapping also causes infinite recursion, what wil happen is Jackson will first serialise PassportDetails, it will encounter user, then it will serialise User in which it will see passportDetails and so on. We can use @JsonManagedReference(Parent entity) or @JsonBackReference(Child entity).
+
+```java
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import jakarta.persistence.*;
+
+@Entity
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long id;
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "passport_id", referencedColumnName = "id")
+    @JsonManagedReference
+    private PassportDetails passportDetails;
+    private String email;
+}
+
+@Entity
+public class PassportDetails {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long id;
+    private String email;
+    private String authorisedTo;
+    private String issuerCountry;
+    private Date issuedOn;
+    private Date validTill;
+
+    @OneToOne(mappedBy = "passportDetails", fetchType = FetchType.LAZY)
+    // mappedBy is the field name in another class giving backwork capability, in table no FK is present
+    @JsonBackReference
+    private User user;
+}
+```
+40. OneToMany Unidirectional : Lazy loading, by default the Parent entity hold the FK and new table is created with column like {parent_id, child_id} as in a single row in parent table we cannot put all child ids.
+```java
+import jakarta.persistence.*;
+import java.util.*;
+@Entity
+public class User {
+    @Id
+    @GeneratedValue(strategy=GenerationType.IDENTITY)
+    private long userId;
+    // other important fields
+    @OneToMany(cascade = CascadeType.ALL)
+    private List<Order> orderList = new ArrayList<>();
+}
+
+@Entity
+public class Order{
+    // id and other fields
+    private String productName;
+}
+```
+If we don't want a new table and want the Child entity to have an id column representing parent entity, we can use @JoinColumn. It tells that we don't want to create a new table instead add a parent reference in child table only.
+```java
+import jakarta.persistence.*;
+import java.util.*;
+@Entity
+public class User {
+    @Id
+    @GeneratedValue(strategy=GenerationType.IDENTITY)
+    private long userId;
+    // other important fields
+    @OneToMany(cascade = CascadeType.ALL)
+    @JoinColumn(name="user_id_fk", referencedColumnName="userId")
+    private List<Order> orderList = new ArrayList<>();
+}
+
+@Entity
+public class Order{
+    // id and other fields
+    private String productName;
+}
+```
+Now the tables will look like User{user_id, ...} and Order{..., product_name, user_id_fk}.
+41. Orphan Removal : Assume we have OneToMany entity relationship, now using java code, we removed few child entity and called save method. We observe that in child table still there are entry but the FK column is null. We can explicitly write orphan removal for this case.
+```java
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true) // this makes sure that if we are removing anything, a delete query also runs and PC is updated
+    @JoinColumn(name="user_id_fk", referencedColumnName="userId")
+    private List<Order> orderList = new ArrayList<>();
+```
+42. OneToMany Bidirectional : Parent entity, Child entity, relation owing side(has FK, not parent always), inverse side(mappedBy).
+
+```java
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.ObjectIdGenerator;
+import jakarta.persistence.*;
+
+import java.util.*;
+
+@Entity
+@JsonIdentityInfo(
+        generator = ObjectIdGenerator.PropertyGenerator.class,
+        property = "userId"
+)
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long userId;
+    // other important fields
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL) // this table doesn't hold any column for orderId, it will only have in the object.
+    private List<Order> orderList = new ArrayList<>();
+    // other setters and getters
+    
+    // we will have to manually take care of this, else it will add all as null
+    public void setOrderList(List<Order> orderList){
+        this.orderList = orderList;
+        for(Order order : orderList){
+            order.setUser(this);
+        }
+    }
+}
+
+@Entity
+@JsonIdentityInfo(
+        generator = ObjectIdGenerator.PropertyGenerator.class,
+        property = "orderId"
+)
+public class Order {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long orderId;
+    private String productName;
+    // other important fields
+    @ManyToOne
+    @JoinColumn(name = "user_id_fk", referencedColumnName = "userId")
+    private User user;
+}
+```
+Tables will look like User{user_id, ...} and Order{..., product_name, user_id_fk}. We can use @JsonIdentityInfo here to stop serialization recursion.
+
+43. ManyToOne unidirectional :
+
+44.
