@@ -548,7 +548,7 @@ import jakarta.persistence.OneToMany;
 To use JPA in a Spring Boot application, add the spring-boot-starter-data-jpa dependency. This starter pulls in JPA APIs (specification only), Spring Data JPA (provides JpaRepository, repository proxies, method-name query derivation, pagination, sorting, specifications, etc.), a JPA provider (Hibernate by default), and transaction and ORM infrastructure.
 
 Below is the internal architecture of JPA:
-![JPA Architecture](src/main/resources/images/JPA-Architecture.png)
+![JPA Architecture](src/main/resources/images/jpa-architecture.png)
 
 ```text
             ┌────────────────────────────────────────────┐
@@ -673,7 +673,7 @@ Hibernate then parses the query, builds an abstract syntax tree, applies the dia
 
 26. Persistence Unit -> Concept defined by JPA, it is everything Hibernate needs to know to build the ORM engine. Once it is built PU is not actively involved then. Logical grouping of all entity who shares same config(means who all are stored in same DB). PU = configuration + metadata + runtime infrastructure (Database / infrastructure information + ORM / entity mapping information). If we are not using spring-boot we would create a persistence.xml file which holds all config related information. If we have 1 DB, we can use application.properties
 
-![Persistence.xml](src/main/resources/images/Persistence-Unit.png)
+![Persistence.xml](src/main/resources/images/persistence-unit.png)
 ```text
         JVM process starts (class loads)
              ↓
@@ -873,7 +873,7 @@ What happens
 * Consistency handled via events / messaging
 
 28. Entity Life Cycle. It is managed in PC. When we issue a command such as save() or delete(), at first it is stored in managed persistence. At some point when commit(flush()) command is issued then only the entities gets save in DB.
-![Entity-Lifecycle](src/main/resources/images/Entity-Lifecycle.png)
+![Entity-Lifecycle](src/main/resources/images/entity-lifecycle.png)
 
 29. EntityManagerFactory -> It does expensive boot-time work:
     - scans all entities (@Entity classes)
@@ -959,7 +959,7 @@ Plus you get:
 
 31. Second Level Caching (L2 caching)
 
-![Second-Level-Caching](src/main/resources/images/Second-Level-Caching.png)
+![Second-Level-Caching](src/main/resources/images/second-level-caching.png)
 
 To use this, we have to add dependency in pom.xml(ehcache, hibernate-jcache, cache-api), enable it via application.properties and then in entity like below
 ```application.properties
@@ -1007,7 +1007,7 @@ All these information can be put into ehcache.xml
 
 CacheConcurrencyStrategy.READ_WRITE
 
-![CacheConcurrencyStrategy.READ_WRITE](src/main/resources/images/CacheConcurrency-READ-WRITE.png)
+![CacheConcurrencyStrategy.READ_WRITE](src/main/resources/images/cacheConcurrency-read-write.png)
 
 35. JPA Annotations
     - @Entity // we should not mark entity classes as final because most ORMs like Hibernate rely on runtime proxy classes for operations like lazy loading to loads the actual data.
@@ -1556,6 +1556,18 @@ We then iterate over this and replace all ? with data, then we execute the query
     - CSRF : CSRF is cross site request forgery. This happens in case of form based logins, when a user is already authenticated on a website, it has a sessionID with it which is returned by server and browser attaches the sessionID everytime we make some request. Now given a malicious link for the same website but intended to do something else, when this link is clicked, the browser is again tricked to attach the same sessionID, and it would look like this is a genuine request to the servers. CSRF tokens save us from this, this token is only known to the server and is stored in browser, attacker can't read it, so even if they initiate a api call to assume a payment api, it won't be able to add CSRF token from its own.
     - XSS : Attackers add a malicious script, when the page loads the script also runs and user information can be extracted. The script runs and anything can be done using the script. We have to escape the input and validation should also be done.
     - SQL Injection : Attacker manipulates the SQL query by inserting malicious input in the SQL fields.
-    - CORS : Not a attack, but it restricts web pages to make a request to a different origin. Origin = protocol + domain + port. This is the first line of defence for a web server.
+    - CORS : Not an attack, but it restricts web pages to make a request to a different origin. Origin = protocol + domain + port. This is the first line of defence for a web server.
 
-55. 
+55. Spring security : It is nothing but a chain of security filters that a request has to pass, and it should clear all the conditions and checks that are applied via them. When we add spring security in the project then a security filter chain gets added in the existing filter chain. We can then customise the bean to perform certain tasks.
+```java
+@Bean
+SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    http
+        .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
+        .httpBasic();
+    return http.build();
+}
+```
+![Spring-Security-Filter-Chain](src/main/resources/images/spring-security-filter-chain.png)
+
+56. 
