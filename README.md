@@ -40,7 +40,52 @@ spring creates OnlineOrder object by adding a proxy product object for the time 
    - Look for @Component, @Service... annotation classes and for each class check for eligibility based on pointcut
    - Creates a proxy and the proxy has code to execute advice (AbstractAutoProxyCreator.class, DefaultAopProxyFactory.class, ReflectiveMethodInvocation.class).
 
-11. @Transaction - used when we want an operation to execute under a transaction(AOP behind the scene). If applied at class level it automatically applied to all public methods and it can also be applied at a method level. Can we use this annotation on a class marked as final or a method marked as final? -> No, because CGLIB won't be able to create it's proxy.
+11. @Transaction - used when we want an operation to execute under a transaction(AOP behind the scene). If applied at class level it automatically applied to all public methods and it can also be applied at a method level. Can we use this annotation on a class marked as final or a method marked as final? -> No, because CGLIB won't be able to create it's proxy. Assume we have a class like below
+```java
+@Service
+public class MyService {
+
+    @Transactional
+    public void m1() {
+        m2();
+    }
+
+    @Transactional
+    public void m2() {
+        // some DB work
+    }
+}
+```
+so for this CGLIB will create a proxy object for e.g., MyService$$CGLib001 and conceptually it looks like below
+```java
+public class MyService$$CGLib001 extends MyService {
+
+    private TransactionInterceptor transactionInterceptor;
+
+    @Override
+    public void m1() {
+        transactionInterceptor.invoke(
+            () -> super.m1()
+        );
+    }
+
+    @Override
+    public void m2() {
+        transactionInterceptor.invoke(
+            () -> super.m2()
+        );
+    }
+}
+```
+So when we call myService.m1(), the actual object on which the call happens is MyService$$CGLib001 and the flow is
+```text
+            Proxy.m1()
+               ↓
+            TransactionInterceptor.start()
+               ↓
+            super.m1()   ← executes target logic
+```
+Now inside super.m1() if we call m2, the call becomes this.m2, here this is the actual object not the proxy, hence the function do not enter the interceptor chain again and CGLIB doesn't intercept internal calls as Spring’s interceptor mechanism only wraps calls that enter from outside via proxy dispatch.
 
 12. When we want ACID, we have to start DB operations in a transaction. BEGIN TRANSACTION, if all success then COMMIT else ROLLBACK. Now all of this we don't need to write, it is taken care under an AOP(TransactionAspectSupport.class). There is a joinPoint which actually invokes methods.
 
@@ -1506,3 +1551,11 @@ select user.name, user.email from user where user.name = ? and user.id = ? limit
 We then iterate over this and replace all ? with data, then we execute the query. Since we are using stringBuilder to create the query, we can also add pagination parameters like offset, limit and execute accordingly.
 
 53. Criteria API : JPA managed, works with entity and support dynamic query, allow us to build dynamic, type-safe query with raw SQL. CriteriaBuilder is used to create the full query and that is passed to EM which actually executes it.
+
+54. Security attacks : CSRF, XSS, SQL Injection and CORS.
+    - CSRF : CSRF is cross site request forgery. This happens in case of form based logins, when a user is already authenticated on a website, it has a sessionID with it which is returned by server and browser attaches the sessionID everytime we make some request. Now given a malicious link for the same website but intended to do something else, when this link is clicked, the browser is again tricked to attach the same sessionID, and it would look like this is a genuine request to the servers. CSRF tokens save us from this, this token is only known to the server and is stored in browser, attacker can't read it, so even if they initiate a api call to assume a payment api, it won't be able to add CSRF token from its own.
+    - XSS : Attackers add a malicious script, when the page loads the script also runs and user information can be extracted. The script runs and anything can be done using the script. We have to escape the input and validation should also be done.
+    - SQL Injection : Attacker manipulates the SQL query by inserting malicious input in the SQL fields.
+    - CORS : Not a attack, but it restricts web pages to make a request to a different origin. Origin = protocol + domain + port. This is the first line of defence for a web server.
+
+55. 
