@@ -121,30 +121,25 @@ So when we call myService.m1(), the actual object on which the call happens is M
 ```
 Now inside super.m1() if we call m2, the call becomes this.m2, here this is the actual object not the proxy, hence the function do not enter the interceptor chain again and CGLIB doesn't intercept internal calls as Spring’s interceptor mechanism only wraps calls that enter from outside via proxy dispatch. Hence, the @Transaction on m2 is ignored and no new transaction will be crated, still m2 runs in the same transaction started by m1.
 
-12. When we want ACID, we have to start DB operations in a transaction. BEGIN TRANSACTION, if all success then COMMIT else ROLLBACK. Now all of this we don't need to write, it is taken care under an AOP(TransactionAspectSupport.class). There is a joinPoint which actually invokes methods.
+12. When we want ACID, we have to start DB operations in a transaction. BEGIN TRANSACTION, if all success then COMMIT else ROLLBACK. Now all of this transaction related code we don't need to write, it is taken care under an AOP(TransactionAspectSupport.class). There is a joinPoint which actually invokes methods.
 
-13. Below is the hierarchy for transaction managers in spring-boot. * marked are for local transactions(happening in a single machine)
+13. Transaction in spring boot : Below is the hierarchy for transaction managers in spring-boot. * marked are for local transactions(happening in a single machine)
 ```text
-                <<TransactionManager>>
-                            |
-                            v
-                <<PlatformTransactionManager>> (getTransaction(), commit(), rollback())
-                            |
-                            v
-                AbstractPlatformTransactionManager (default implementation for above methods)
-                            |
-                            v
+        <<TransactionManager>>
+                    ↓
+        <<PlatformTransactionManager>> (getTransaction(), commit(), rollback())
+                    ↓
+        AbstractPlatformTransactionManager (default implementation for above methods)
+                    ↓
         +---------------------------------------------+
-        |               |               |             |
-        v               v               v             v
+        ↓               ↓               ↓             ↓
 *DataSourceTM      *Hibernate-TM     *JPA-TM     JTA-TM (distributed, 2PC)
-        |                                 
-        v                                 
+        ↓                                                               
     JDBC-TM(local JDBC)
 ```
-14. Transaction Management -> Declarative approach(@Transactional), Programmatic approach
+14. Transaction Management : Declarative approach(@Transactional), Programmatic approach
 
-15. Declarative approach -> Based on underlying Datasource, spring-boot chooses a transaction manager itself. If we want to give our configs, it can be done as below
+15. Declarative approach : Based on underlying datasource, spring-boot chooses a transaction manager itself. If we want to give our configs, it can be done as below
 ```java
 import jakarta.transaction.Transactional;
 import org.springframework.context.annotation.Bean;
@@ -167,9 +162,7 @@ public class AppConfig {
         dataSource.setPassword("password");
         return dataSource;
     }
-
-    // if we don't provide any name, the method name is the bean name
-    // here bean name is -> "userTransactionManager"
+    // if we don't provide any name, the method name is the bean name here bean name is -> "userTransactionManager"
     @Bean
     public PlatformTransactionManager userTransactionManager(DataSource dataSource) {
         return new DataSourceTransactionManager(dataSource);
@@ -198,13 +191,11 @@ public class User {
         // 2. call external API
         // 3. update DB
     }
-    // issue in this code, if the external API is taking a lot of time, the DB,
-    // connection pool etc. would be locked until then under a transaction, this
-    // is a case of resource contention, solution -> programmatic transaction management
-    // in which we can control the flow i.e., where to begin, where to commit and rollback
 }
 ```
-17. We can create a bean as below, there are also another ways using TransactionTemplate
+Issue in this code, if the external API is taking a lot of time, the db connection pool etc. would be locked until then under a transaction, this is a case of resource contention, solution -> programmatic transaction management in which we can control the flow i.e., where to begin, when to close connection, where to commit and rollback.
+
+17. We can create a bean as below, still there are also another ways using TransactionTemplate
 ```java
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -299,7 +290,7 @@ public void fetchAadharCardForVerification(){
     // DB operations
 }
 ```
-20. Springboot JPA
+20. Springboot JPA Architecture :
 ```text
                          ┌────────────────────────┐
                          │    Application Logic   │
@@ -341,9 +332,8 @@ public class DatabaseConnection {
         try {
             // load driver in JVM
             Class.forName("org.h2.Driver");
-
             // establish connection with DB
-            return DriverManager.getConnection("jdbc:h2:mem:userDB", "sa", "");
+            return DriverManager.getConnection("jdbc:h2:mem:userDB", "user", "password");
         } catch (ClassNotFoundException | SQLException e) {
             System.out.println(e.getMessage());
         }
@@ -418,7 +408,7 @@ public class UserDAO {
     }
 }
 ```
-Problem with this approach is a lot of boilerplate code is written again and again such as :
+Problem with this approach is a lot of boilerplate code is written again and again :
   - Driver class loading
   - Establish connection
   - Exception Handling
@@ -517,18 +507,12 @@ spring.jpa.hibernate.ddl-auto=update
 ```
 JdbcTemplate takes care of all connection establishing, running insert and read query, closing DB connections etc. It throws granular level of exceptions for better debugging. Default HikariDataSource is used and it provides inbuilt HikariCP. If we want to use some different datasource, it can be used in a Config class.
 
-24. JdbcTemplate still doesn't have automatic object mapping, caching, domain modeling, object graph management, relationship handling, hence to improve all these issues Hibernate was introduced. Why ORM? ORM allows us to work with objects. Acts as bridge between java objects and database tables. With JDBC, we still have
-  - manual object mapping(resultset -> objects) : ORM -> @Entity, @Column
-  - manual join handling : ORM -> @JoinColumn, @OneToMany, @ManyToOne
-  - no notion of object graph/domain model
-  - no change tracking
-  - no caching : ORM -> @Cacheable
-  - no inheritance mapping : ORM -> @Inheritance
+24. JdbcTemplate still doesn't have automatic object mapping, caching, domain modeling, object graph management, relationship handling, hence to improve all these issues ORM framework was introduced. ORM allows us to work with objects. Acts as bridge between java objects and database tables.
 
 ```text
             Your Code
                ↓
-         Hibernate / JPA     ← ORM + mapping + unit of work
+         JPA(specification) / Hibernate(implementation)     ← ORM + mapping + unit of work
                ↓
             JDBC APIs
                ↓
@@ -571,7 +555,7 @@ Hibernate provides
         JdbcTemplate (for reports / batch / complex queries)
 ```
 
-25. Hibernate was vendor specific and applications that used Hibernate directly became tightly coupled to it. Switching to a different ORM provider was difficult. To solve this problem, JPA (Java Persistence API) was introduced. JPA is a specification (interfaces + annotations). Hibernate is an implementation of this specification. Applications should depend on the JPA abstraction and let Hibernate act as the underlying provider. This keeps the codebase clean, portable, and maintainable. Below are some of the JPA imports which should be used:
+25. Hibernate was vendor specific and applications that used Hibernate directly became tightly coupled to it. Switching to a different ORM provider was difficult. To solve this problem, JPA (Java Persistence API) was introduced. JPA is a specification (interfaces + annotations) for ORMs. Hibernate is an implementation of this specification. Applications should depend on the JPA abstraction and let Hibernate act as the underlying provider. This keeps the codebase clean, portable, and maintainable. Below are some of the JPA imports which should be used:
 
 ```java
 import jakarta.persistence.Entity;
@@ -579,7 +563,15 @@ import jakarta.persistence.Id;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.OneToMany;
 ```
+
 To use JPA in a Spring Boot application, add the spring-boot-starter-data-jpa dependency. This starter pulls in JPA APIs (specification only), Spring Data JPA (provides JpaRepository, repository proxies, method-name query derivation, pagination, sorting, specifications, etc.), a JPA provider (Hibernate by default), and transaction and ORM infrastructure.
+```text
+            1997  → JDBC
+            2001  → Hibernate ORM
+            2003  → Spring JdbcTemplate
+            2006  → JPA specification
+```
+
 
 Below is the internal architecture of JPA:
 ![JPA Architecture](src/main/resources/images/jpa-architecture.png)
