@@ -12,17 +12,17 @@ public class OnlineOrder implements Order {
     // other fields
 }
 ```
-spring creates OnlineOrder object by adding a proxy product object for the time being. When we want to use product then spring injects the actual bean. If the product class is marked as final, spring would not be able to create a proxy and inject and the application will fail to start.
+spring creates OnlineOrder object by adding a proxy product object(child of product) for the time being. When we want to use product then spring injects the actual bean. If the product class is marked as final, spring would not be able to create a proxy object and inject, eventually the application will fail to start.
 
 3. AOP : Aspect Oriented Programming, is known for offloading the cross-cutting concerns such as logging, updating metrics etc. so that we can focus on writing main business logic.
 
-4. AOP key terms -> Aspect(it is the file containing advice and pointcut), Advice(it is a method that perform some cross-cutting task), Pointcut(it tells where all this advice is applicable).
+4. AOP key terms -> Aspect(it is the file containing advice and pointcut), Advice(it is a method that perform some cross-cutting task, e.g. logging when we call a repository method), Pointcut(it tells where all this advice is applicable, suppose a advice needs to be run on all the methods of a particular class, that can be mentioned in the pointcut).
 
 5. Pointcut -> tells where advice should be applied. Types of point cuts :
    - execution(for methods matching the pointcut expression) e.g., @Before("execution(public String com.bsharan.demo_project.components.User.init())"), wildcards can be used (*(exact 1 match) ..(0 or more match))
    - within(matches all method within a class/package) e.g., @Before("within(com.bsharan.demo_project.components.User)") OR @Before("within(com.bsharan.demo_project.components..*)")
    - @within(any class have a particular annotation) e.g., @Before("@within(org.springframework.stereotype.Component)")
-   - @annotation(matches any method that is annotated with given annotation) e.g., ("@annotation(org.springframework.web.bind.annotation.GetMapping)")
+   - @annotation(matches any method that is annotated with given annotation) e.g., ("@annotation(org.springframework.web.bind.annotation.GetMapping)") - matches all method annotated with @GetMapping.
    - args(matches any method with particular argument) e.g., @Before("args(String, int)") OR @Before("args(com.bsharan.demo_project.components.User, Long)")
    - @args(matches any method with particular parameters and that parameter class is annotated with particular annotation)
 
@@ -30,15 +30,49 @@ spring creates OnlineOrder object by adding a proxy product object for the time 
 
 7. Named point cuts e.g., @Pointcut("execution(...)") public void customPointcutName(){ //empty method }. Now it can be used as @Before("customPointcutName").
 
-8. @Before, @After, @Around(it surrounds the method start and end).
+8. When a pointcut is matched, we need to define when will the advice be executed, before running the method for which PC has been matched, after or around using these annotations - @Before, @After, @Around(it surrounds the method start and end).
 
 9. In case of @Around, we have to call the method explicitly, it can be done using joinPoint.proceed(). So the flow is -> PC expression matched for @Around, then advice starts executing until it reaches joinPoint.proceed()
 
-10. How AOP works :
-   - When spring application starts, it looks for all @Aspect classes
-   - Parse the pointcut and store in efficient data structure for effective lookup (PointcutParser.class)
-   - Look for @Component, @Service... annotation classes and for each class check for eligibility based on pointcut
-   - Creates a proxy and the proxy has code to execute advice (AbstractAutoProxyCreator.class, DefaultAopProxyFactory.class, ReflectiveMethodInvocation.class).
+10. How AOP works : Assume we have this service:
+```java
+@Service
+public class PaymentService {
+    public void processPayment() {
+        System.out.println("Processing payment");
+    }
+}
+```
+And an aspect:
+```java
+@Aspect
+@Component
+public class LoggingAspect {
+
+    @Before("execution(* com.example.service.PaymentService.processPayment(..))")
+    public void logBefore() {
+        System.out.println("Logging before payment");
+    }
+}
+```
+AOP flow :
+   - When the Spring application starts, it scans the classpath and identifies all classes annotated with @Aspect (for example, LoggingAspect). 
+   - Spring parses the pointcut expression execution(* com.example.service.PaymentService.processPayment(..)) and stores it in an efficient structure for quick lookup (PointcutParser.class).
+   - During bean creation, Spring creates beans for classes annotated with @Component, @Service, etc. for example, it creates a bean for PaymentService.
+   - Before returning the PaymentService bean to the container, Spring checks whether any stored pointcut matches methods of this bean. Since the pointcut targets PaymentService.processPayment(), the bean is eligible for AOP. 
+   - Instead of returning the original PaymentService object, Spring creates a proxy around it. This proxy contains logic to run the advice (logBefore) when processPayment() is called. Internally this is handled by classes such as AbstractAutoProxyCreator, DefaultAopProxyFactory, and ReflectiveMethodInvocation.
+
+So when the application calls paymentService.processPayment() the actual call flow becomes:
+```text
+            Client
+               ↓
+            Proxy (created by Spring AOP)
+               ↓
+            execute @Before advice (logBefore)
+               ↓
+            actual method PaymentService.processPayment()
+```
+The specific bean being proxied here is the PaymentService bean, because its method matches the pointcut defined in LoggingAspect.
 
 11. @Transaction - used when we want an operation to execute under a transaction(AOP behind the scene). If applied at class level it automatically applied to all public methods and it can also be applied at a method level. Can we use this annotation on a class marked as final or a method marked as final? -> No, because CGLIB won't be able to create it's proxy. Assume we have a class like below
 ```java
@@ -85,7 +119,7 @@ So when we call myService.m1(), the actual object on which the call happens is M
                ↓
             super.m1()   ← executes target logic
 ```
-Now inside super.m1() if we call m2, the call becomes this.m2, here this is the actual object not the proxy, hence the function do not enter the interceptor chain again and CGLIB doesn't intercept internal calls as Spring’s interceptor mechanism only wraps calls that enter from outside via proxy dispatch.
+Now inside super.m1() if we call m2, the call becomes this.m2, here this is the actual object not the proxy, hence the function do not enter the interceptor chain again and CGLIB doesn't intercept internal calls as Spring’s interceptor mechanism only wraps calls that enter from outside via proxy dispatch. Hence, the @Transaction on m2 is ignored and no new transaction will be crated, still m2 runs in the same transaction started by m1.
 
 12. When we want ACID, we have to start DB operations in a transaction. BEGIN TRANSACTION, if all success then COMMIT else ROLLBACK. Now all of this we don't need to write, it is taken care under an AOP(TransactionAspectSupport.class). There is a joinPoint which actually invokes methods.
 
