@@ -512,20 +512,20 @@ JdbcTemplate takes care of all connection establishing, running insert and read 
 ```text
             Your Code
                ↓
-         JPA(specification) / Hibernate(implementation)     ← ORM + mapping + unit of work
+            JPA(specification) / Hibernate(implementation)     ← ORM + mapping + unit of work
                ↓
             JDBC APIs
                ↓
-         Database Driver
+            Database Driver
                ↓
-         Actual Database
+            Actual Database
 ```
 But, JDBC does not provide
   - Automatic entity mapping
   - Relationship handling (@OneToMany, @OneToOne)
   - Object graph loading
   - Lazy loading
-  - Dirty checking
+  - Dirty checking - difference between entity when it was loaded and what happened to it during a transaction
   - Persistence context (1st-level cache)
   - Unit of Work
   - Cascades
@@ -563,7 +563,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.OneToMany;
 ```
-
 To use JPA in a Spring Boot application, add the spring-boot-starter-data-jpa dependency. This starter pulls in JPA APIs (specification only), Spring Data JPA (provides JpaRepository, repository proxies, method-name query derivation, pagination, sorting, specifications, etc.), a JPA provider (Hibernate by default), and transaction and ORM infrastructure.
 ```text
             1997  → JDBC
