@@ -683,7 +683,7 @@ class UserRepositoryImpl implements UserRepository{
     // repository methods
 }
 ```
-For every @Repository interface, Spring Data JPA creates a JpaRepositoryFactory during application startup. This factory is responsible for creating repository implementations, wiring the EntityManager, and generating query logic. Spring then generates a proxy class at runtime (for example, UserRepository$$Proxy). The proxy implements UserRepository and JpaRepository and intercepts all method calls. Proxies are injected with the EntityManager, query metadata, and method mappings. Each thread has a ThreadLocal map where Spring stores a reference to the EntityManager for that thread, and repository calls use that EntityManager to perform database operations. Spring Data inspects every method in UserRepository and builds metadata for each method.
+For every @Repository interface, Spring Data JPA creates a JpaRepositoryFactory during application startup. This factory is responsible for creating repository implementations, wiring the EntityManager, and generating query logic. Spring then generates a proxy class at runtime (for example, UserRepository$$Proxy). The proxy implements UserRepository and JpaRepository and intercepts all method calls. Proxies are injected with the EntityManager, query metadata, and method mappings. Each thread has a ThreadLocal map where Spring stores a reference to the EntityManager for that thread, and repository calls use that EntityManager to perform database operations. SpringJPA does not inject real EM in @Repository, a proxy is injected which calls the real EM object defined for that transaction. Spring Data inspects every method in UserRepository and builds metadata for each method.
 ```text
 Method            Category
 --------------------------
@@ -716,8 +716,16 @@ public User getUserById(){
 }
 ```
 
-26. Persistence Unit -> Concept defined by JPA, it is everything Hibernate needs to know to build the ORM engine. Once it is built PU is not actively involved then. Logical grouping of all entity who shares same config(means who all are stored in same DB). PU = configuration + metadata + runtime infrastructure (Database / infrastructure information + ORM / entity mapping information). If we are not using spring-boot we would create a persistence.xml file which holds all config related information. If we have 1 DB, we can use application.properties
-
+26. Persistence Unit -> Concept defined by JPA, it is everything Hibernate needs to know to build the ORM engine. Once it is built PU is not actively involved then. Logical grouping of all entity who shares same config(means who all are stored in same DB). PU = configuration + metadata + runtime infrastructure (Database / infrastructure information + ORM / entity mapping information). If we are not using spring-boot we would create a persistence.xml file which holds all config related information. If we have 1 DB, we can use application.properties. Each PU has an EntityManager factory. So full hierarchy looks like :
+```text
+            Persistence Unit
+                   ↓
+            EntityManagerFactory
+                   ↓ (creates multiple)
+            EntityManager 
+                   ↓ (owns and manages)
+            Persistence Context
+```
 ![Persistence.xml](src/main/resources/images/persistence-unit.png)
 ```text
         JVM process starts (class loads)
