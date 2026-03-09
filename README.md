@@ -571,7 +571,6 @@ To use JPA in a Spring Boot application, add the spring-boot-starter-data-jpa de
             2006  → JPA specification
 ```
 
-
 Below is the internal architecture of JPA:
 ![JPA Architecture](src/main/resources/images/jpa-architecture.png)
 
@@ -628,7 +627,6 @@ Below is the internal architecture of JPA:
             │  - Storage engine                          │
             └────────────────────────────────────────────┘
 ```
-
 Spring Data JPA eliminates boilerplate DAO code. Without Spring Data JPA, developers would need to manually write repository implementations and wire EntityManager everywhere.
 
 JPA APIs standardize ORM behavior across Java and decouple application code from a specific ORM vendor. JPA defines what an ORM should do, not how it should do it.
@@ -640,10 +638,9 @@ JDBC APIs provide a standard database access API in Java and avoid database-vend
 JDBC drivers implement JDBC APIs for a given database and translate Java calls into database-specific wire protocol.
 
 How JPA works internally: The Persistence Unit (PU) stores database configuration (driver, URL, username, password, dialect, etc.) along with entity mapping metadata. Hibernate (as the JPA provider) reads the persistence unit configuration during application startup. Using this configuration, an EntityManagerFactory (EMF) is created. Internally, this is Hibernate’s SessionFactory. Spring Boot autoconfigures and manages the lifecycle of the EMF, while Hibernate provides the actual implementation. The EntityManagerFactory produces EntityManager instances. Whenever the application needs to interact with the database for CRUD operations, it does so via an EntityManager. Each EntityManager is associated with a Persistence Context, which:
-
-* holds managed entity instances
-* provides first-level (L1) caching
-* performs dirty checking and change tracking
+- holds managed entity instances
+- provides first-level (L1) caching
+- performs dirty checking and change tracking
 
 Below is the complete flow, assuming we hit a findById(1) method:
 ```text
@@ -674,7 +671,19 @@ Below is the complete flow, assuming we hit a findById(1) method:
                 -> User(id=1, name="Bhaskar Sharan")
             ← Entity returned to caller
 ```
-For every @Repository interface, Spring Data JPA creates a JpaRepositoryFactory during application startup. This factory is responsible for creating repository implementations, wiring the EntityManager, and generating query logic. Spring then generates a proxy class at runtime (for example, UserRepository$$Proxy). The proxy implements UserRepository and JpaRepository and intercepts all method calls. Proxies are injected with the EntityManager, query metadata, and method mappings. Spring Data inspects every method in UserRepository and builds metadata for each method.
+@Repository is a wrapper around EntityManager. When we write
+```java
+@Repository
+public interface UserRepository extends JpaRepository<User, Long> { }
+```
+Spring create a proxy implementation at application startup, conceptually like
+```java
+class UserRepositoryImpl implements UserRepository{
+    private EntityManager entityManager;  // <--- here a proxy EM is injected
+    // repository methods
+}
+```
+For every @Repository interface, Spring Data JPA creates a JpaRepositoryFactory during application startup. This factory is responsible for creating repository implementations, wiring the EntityManager, and generating query logic. Spring then generates a proxy class at runtime (for example, UserRepository$$Proxy). The proxy implements UserRepository and JpaRepository and intercepts all method calls. Proxies are injected with the EntityManager, query metadata, and method mappings. Each thread has a ThreadLocal map where Spring stores a reference to the EntityManager for that thread, and repository calls use that EntityManager to perform database operations. Spring Data inspects every method in UserRepository and builds metadata for each method.
 ```text
 Method            Category
 --------------------------
@@ -683,18 +692,29 @@ save              CRUD
 findByEmail       Derived Query
 existsByEmail     Derived Exists Query
 ```
-For methods like findByEmail, Spring Data parses the method name (find → SELECT, ByEmail → WHERE email = ?) and internally builds a JPQL query like:
+For methods like findByEmail, Spring Data parses the method name (find → SELECT, ByEmail → WHERE email = ?) and internally builds a JPQL query like :
 ```sql
 select u from User u where u.email = :email
 ```
-All derived queries and method metadata are cached, so parsing does not happen on every invocation. These repository proxies provide:
-* persistence logic delegation
-* transaction participation
-* query derivation from method names
-* exception translation
-* AOP integration
+All derived queries and method metadata are cached, so parsing does not happen on every invocation. These repository proxies provide :
+- persistence logic delegation
+- transaction participation
+- query derivation from method names
+- exception translation
+- AOP integration
 
 Hibernate then parses the query, builds an abstract syntax tree, applies the dialect, generates SQL, and hands execution over to the JDBC APIs. The dialect is used by Hibernate during SQL generation, not during JDBC execution. Hibernate generates SQL based on entity metadata, and the dialect adapts this SQL to be database-vendor specific. JDBC simply executes the final SQL.
+Full flow of entity when we hit a repository method :
+```java
+User user = userRepository.findById(1L).get();
+```
+When we call repository method, internally EntityManager(main interface used to interact with the database persist, find, remove, query) is called. The Persistence Context(Hibernate Session) maintains a map as Map<EntityKey, Entity>. If it is not present here, then DB query happens. Hibernate creates query and sends the query to JDBC. Database now returns ResultSet. Hibernate then creates User object in heap memory, populated fields. Now the entity is in RAM. Hibernate then stores it in internal structures also hibernate stores a snapshot of original values which is used for dirty checking. Now the entity becomes managed. If PC contains too much entity then the CPU overhead increases. Periodically we should keep on resetting the PC.
+```java
+public User getUserById(){
+   entityManager.flush();
+   entityManager.clear(); 
+}
+```
 
 26. Persistence Unit -> Concept defined by JPA, it is everything Hibernate needs to know to build the ORM engine. Once it is built PU is not actively involved then. Logical grouping of all entity who shares same config(means who all are stored in same DB). PU = configuration + metadata + runtime infrastructure (Database / infrastructure information + ORM / entity mapping information). If we are not using spring-boot we would create a persistence.xml file which holds all config related information. If we have 1 DB, we can use application.properties
 
@@ -740,10 +760,10 @@ spring.jpa.show-sql=false
 ```
 
 What happens
-* One implicit Persistence Unit is created
-* One EntityManagerFactory is created
-* One JpaTransactionManager is created
-* All repositories use the same EM and TM
+- One implicit Persistence Unit is created
+- One EntityManagerFactory is created
+- One JpaTransactionManager is created
+- All repositories use the same EM and TM
 
 MULTIPLE PU – MULTIPLE DATABASES (NO DISTRIBUTED TRANSACTIONS) : One service → multiple databases, transactions do NOT span databases. Example : Reporting service, Orders DB (MySQL), Analytics DB (Postgres)
 ```text
@@ -805,9 +825,9 @@ public PlatformTransactionManager ordersTm() {  }
 Same for analytics.
 
 What happens
-* PU1 → Orders entities → Orders EMF → Orders TM → MySQL
-* PU2 → Analytics entities → Analytics EMF → Analytics TM → Postgres
-* Transactions are isolated per DB
+- PU1 → Orders entities → Orders EMF → Orders TM → MySQL
+- PU2 → Analytics entities → Analytics EMF → Analytics TM → Postgres
+- Transactions are isolated per DB
 
 MULTIPLE PU – SAME DATABASE (DIFFERENT SCHEMAS) : Same DB instance, different schemas / bounded contexts. Example : Auth schema + Billing schema in same Postgres DB
 ```application.properties
@@ -832,9 +852,9 @@ public LocalContainerEntityManagerFactoryBean billingEmf() {
 }
 ```
 What happens
-* PU1 → auth schema entities
-* PU2 → billing schema entities
-* Same physical DB, different logical ownership
+- PU1 → auth schema entities
+- PU2 → billing schema entities
+- Same physical DB, different logical ownership
 
 MULTIPLE PU + SINGLE JTA TRANSACTION MANAGER (DISTRIBUTED TX) : Strong consistency across multiple databases, Legacy enterprise systems (banking, payments). Example : Oracle (accounts) + MySQL (ledger)
 ```text
@@ -875,10 +895,10 @@ spring.jpa.properties.hibernate.transaction.jta.platform=org.hibernate.engine.tr
 spring.jpa.hibernate.ddl-auto=validate
 ```
 What happens
-* PU1 → EMF1 → XA Oracle
-* PU2 → EMF2 → XA MySQL
-* ONE JTA TransactionManager
-* 2-phase commit at runtime
+- PU1 → EMF1 → XA Oracle
+- PU2 → EMF2 → XA MySQL
+- ONE JTA TransactionManager
+- 2-phase commit at runtime
 
 MICROSERVICES (MODERN DEFAULT) : Each service has its own application.properties
 Order Service
@@ -892,10 +912,10 @@ spring.datasource.url=jdbc:postgresql://payments-db:5432/payments
 spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
 ```
 What happens
-* Each service has exactly one PU
-* No JTA
-* No distributed transactions
-* Consistency handled via events / messaging
+- Each service has exactly one PU
+- No JTA
+- No distributed transactions
+- Consistency handled via events / messaging
 
 28. Entity Life Cycle. It is managed in PC. When we issue a command such as save() or delete(), at first it is stored in managed persistence. At some point when commit(flush()) command is issued then only the entities gets save in DB.
 ![Entity-Lifecycle](src/main/resources/images/entity-lifecycle.png)
