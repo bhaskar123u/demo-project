@@ -685,6 +685,29 @@ class UserRepositoryImpl implements UserRepository{
 ```
 For every @Repository interface, Spring Data JPA creates a JpaRepositoryFactory during application startup. This factory is responsible for creating repository implementations, wiring the EntityManager, and generating query logic. Spring then generates a proxy class at runtime (for example, UserRepository$$Proxy). The proxy implements UserRepository and JpaRepository and intercepts all method calls. Proxies are injected with the EntityManager, query metadata, and method mappings. Each thread has a ThreadLocal map where Spring stores a reference to the EntityManager for that thread, and repository calls use that EntityManager to perform database operations. SpringJPA does not inject real EM in @Repository, a proxy is injected which calls the real EM object defined for that transaction. Spring Data inspects every method in UserRepository and builds metadata for each method.
 ```text
+@Transactional method called
+        ↓
+Transaction interceptor runs
+        ↓
+Transaction starts
+        ↓
+EntityManager created
+        ↓
+Stored in ThreadLocal
+        ↓
+Repository method called
+        ↓
+EntityManager proxy retrieves EM from ThreadLocal
+        ↓
+DB operation executed
+        ↓
+Transaction commit
+        ↓
+EntityManager removed from ThreadLocal
+        ↓
+EntityManager closed
+
+
 Method            Category
 --------------------------
 findById          CRUD (from JpaRepository)
