@@ -25,6 +25,7 @@ public class WebSecurityConfiguration {
                 session.maximumSessions(1)
                        .maxSessionsPreventsLogin(true)
         )
+        .csrf(csrf -> csrf.disable())
         .formLogin(withDefaults()) // here we can add our own custom login page
         .httpBasic(withDefaults());
         return http.build();

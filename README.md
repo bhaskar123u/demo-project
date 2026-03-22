@@ -1757,13 +1757,14 @@ Before /login and when the request reaches UsernamePasswordAuthenticationFilter 
 61. If we want to relax authentication on some apis(e.g. /register). If we want our custom /login and /logout page, we can customize that also. After authentication is done, we need to write manual code for authorization, it is not implemented by default.
 ```java
 SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http){
-    http.authorizeHttpRequests((request)->
-                    request.requestMatchers("/register").permitAll()
-                            .requestMatchers("/users").hasRole("USER") // manually restricting end point
-                            .anyRequest().authenticated()
-    );
-    http.formLogin(withDefaults()); // here we can add our own custom login page
-    http.httpBasic(withDefaults());
+    http.authorizeHttpRequests((request)-> 
+        request.requestMatchers("/register").permitAll()
+        .requestMatchers("/users").hasRole("USER") // manually restricting end point
+        .anyRequest().authenticated()
+    )
+    .csrf(csrf -> csrf.disable())
+    .formLogin(withDefaults()) // here we can add our own custom login page
+    .httpBasic(withDefaults());
     return http.build();
 }
 ```
@@ -1772,18 +1773,43 @@ We can also restrict multiple login for same user by using sessionManagement wit
 @Bean
 SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http){
     http.authorizeHttpRequests((request)->
-                    request.requestMatchers("/register").permitAll()
-                            .requestMatchers("/users").hasRole("ADMIN")
-                            .anyRequest().authenticated()
-            )
-            // Allow only 1 active session per user, and if a second login happens, reject it instead of kicking out the first session.
-            .sessionManagement(session ->
-                    session.maximumSessions(1)
-                            .maxSessionsPreventsLogin(true)
-            );
-    http.formLogin(withDefaults()); // here we can add our own custom login page
-    http.httpBasic(withDefaults());
+        request.requestMatchers("/register").permitAll()
+                .requestMatchers("/users").hasRole("ADMIN")
+                .anyRequest().authenticated()
+    )
+    // Allow only 1 active session per user, and if a second login happens, reject it instead of kicking out the first session.
+    .sessionManagement(session ->
+        session.maximumSessions(1)
+                .maxSessionsPreventsLogin(true)
+    )
+    .csrf(csrf -> csrf.disable())
+    .formLogin(withDefaults()) // here we can add our own custom login page
+    .httpBasic(withDefaults());
     return http.build();
 }
 ```
 62. Disadvantages : Vulnerable to security issues like CSRF and Session hijacking. By default, CSRF is enabled for form based login, and we should not disable it. Session management is a big overhead and in case of distributed system it can lead to scalability issues. DB server load gets increased.
+
+63. Basic Authentication - Stateless, no session is stored by server, while accessing each resource, user have to pass its credentials in headers. Authorization: Basic<base64(username:password)>, base64 encoded, not encrypted. Both authentication and authorization flow is similar as form based. The difference lies in how we implement it in security config.
+
+![Basic-Authentication](src/main/resources/images/basic-authentication.png)
+
+```java
+@Bean
+SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) {
+    http.authorizeHttpRequests((request) ->
+        request.requestMatchers("/register").permitAll()
+                .requestMatchers("/users").hasRole("ADMIN")
+                .anyRequest().authenticated()
+    )
+    // stateless session
+    .sessionManagement(session ->
+        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+    )
+    // .formLogin(withDefaults()) <-- this is not applicable now
+    .csrf(csrf -> csrf.disable()) // not needed in stateless methods
+    .httpBasic(withDefaults()); // basic authentication method to be used
+    return http.build();
+}
+```
+64. Disadvantages : send credentials in every request, must enforce HTTPS, once credentials are compromised, we can't do anything. Not suitable for large scale application.
