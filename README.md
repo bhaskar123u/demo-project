@@ -1813,3 +1813,50 @@ SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) {
 }
 ```
 64. Disadvantages : send credentials in every request, must enforce HTTPS, once credentials are compromised, we can't do anything. Not suitable for large scale application.
+
+65. JWT : Secure way of transmitting information between parties as JSON object. It is compact, self-contained/stateless, can be signed using HMAC/RSA, has built-in expiry, custom claims(additional data) can be added in JWT. We can read more about this [here](https://github.com/bhaskar123u/auth-service/blob/main/README.md#jwt). It is used in many areas such as authentication(confirming user identity), authorization(checking user permission before providing access to a resource), SSO(authenticate once, access multiple applications). JWT when is has signature(having alg) is called JWT+JWS.
+
+66. High-level-flow diagram : Client, Authentication-Server(can be self-managed/3rd part application), Resource-Server(your application).
+
+![JWT-flow-diagram](src/main/resources/images/jwt-flow.png)
+
+67. Claims : The payload part of JWT has claims, any user information/additional information is kept here. Mainly it is of 3 types -> Registered claims(pre-defined names and meanings), Public claims(custom claim shared and understood by multiple parties), Private claims(custom claims intended for internal use only and is not standardized). Registered claim can look like
+```text
+{
+    "iss": "https://...",      <-- issuer
+    "sub": "1234567890",       <-- subject
+    "exp": "1834329482",
+    "email": "abc@xyz.com",
+    "jti": "unique_id_12345"   <-- uniquw jwt id
+}
+```
+Never put confidential information in claims.
+
+68. Disadvantages of JWT : `No token in-validation mechanism`. Assume a user logged in, and he does something on the platform due to which it got marked at black listed user, now the user is currently loggedIn and the JWT is valid till next 10 mins, at the time it is marked as invalid. How can we in-validate his JWT? -> jti is a unique identifier for a JWT, generated at token creation time (typically using UUID). It is different from userId because a user can have multiple active tokens. Each login generates a new jti, allowing fine-grained control like invalidating a single token via blacklisting. As soon as user gets blacklisted, we can add the jti in redis, now next api calls can restrict the user. There are other approach like jwt versioning, user invalidation using a DB column, but they all needs a DB call. Other issues with JWT are `Sensitive Data Exposure Risk`, `Stale Data Problem`, `JWK exploitation` etc. There are concepts like JWE, Json Web Encryption, where we can encrypt the payload and it's gets decrypted while verifying.
+
+69. JWK Exploitation : JWK (JSON Web Key) exploitation refers to a class of vulnerabilities in JWT-based authentication systems where an attacker manipulates the token header to trick the server into using a malicious or unintended key for signature verification. In a secure implementation, the server should only use trusted, pre-configured keys (or a trusted JWKS endpoint) to validate JWT signatures. However, if the server blindly trusts header parameters such as `jwk`, `jku`, or `kid`, it becomes vulnerable. For example, in JWK injection, an attacker embeds their own public key directly in the JWT header and signs the token with the corresponding private key:
+```json
+{
+  "alg": "RS256",
+  "jwk": {
+    "kty": "RSA",
+    "n": "...attacker key...",
+    "e": "AQAB"
+  }
+}
+```
+If the server uses this jwk value for verification, the forged token will be accepted. Similarly, in **JKU injection**, the attacker provides a malicious URL pointing to their own JWKS:
+```json
+{
+  "alg": "RS256",
+  "jku": "https://attacker.com/jwks.json"
+}
+```
+If the server fetches keys from this untrusted URL, it may validate attacker-signed tokens. Another common issue is `kid` manipulation, where the attacker tampers with the key identifier:
+```json
+{
+  "alg": "RS256",
+  "kid": "../../../../etc/passwd"
+}
+```
+In poorly implemented systems, this can lead to path traversal, SQL injection, or incorrect key resolution. These vulnerabilities arise because the JWT header is fully user-controlled and must never be trusted. To prevent JWK exploitation, applications should ignore untrusted key inputs from the token, strictly enforce allowed algorithms, whitelist trusted JWKS endpoints, and securely manage key lookup on the server side.
