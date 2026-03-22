@@ -1,4 +1,4 @@
-package com.bsharan.demo_project.components;
+package com.bsharan.demo_project.component;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;

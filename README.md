@@ -19,11 +19,11 @@ spring creates OnlineOrder object by adding a proxy product object(child of prod
 4. AOP key terms -> Aspect(it is the file containing advice and pointcut), Advice(it is a method that perform some cross-cutting task, e.g. logging when we call a repository method), Pointcut(it tells where all this advice is applicable, suppose a advice needs to be run on all the methods of a particular class, that can be mentioned in the pointcut).
 
 5. Pointcut -> tells where advice should be applied. Types of point cuts :
-   - execution(for methods matching the pointcut expression) e.g., @Before("execution(public String com.bsharan.demo_project.components.User.init())"), wildcards can be used (*(exact 1 match) ..(0 or more match))
-   - within(matches all method within a class/package) e.g., @Before("within(com.bsharan.demo_project.components.User)") OR @Before("within(com.bsharan.demo_project.components..*)")
+   - execution(for methods matching the pointcut expression) e.g., @Before("execution(public String com.bsharan.demo_project.component.User.init())"), wildcards can be used (*(exact 1 match) ..(0 or more match))
+   - within(matches all method within a class/package) e.g., @Before("within(com.bsharan.demo_project.component.User)") OR @Before("within(com.bsharan.demo_project.component..*)")
    - @within(any class have a particular annotation) e.g., @Before("@within(org.springframework.stereotype.Component)")
    - @annotation(matches any method that is annotated with given annotation) e.g., ("@annotation(org.springframework.web.bind.annotation.GetMapping)") - matches all method annotated with @GetMapping.
-   - args(matches any method with particular argument) e.g., @Before("args(String, int)") OR @Before("args(com.bsharan.demo_project.components.User, Long)")
+   - args(matches any method with particular argument) e.g., @Before("args(String, int)") OR @Before("args(com.bsharan.demo_project.component.User, Long)")
    - @args(matches any method with particular parameters and that parameter class is annotated with particular annotation)
 
 6. We can also combine multiple point cuts using &&, ||
@@ -1689,4 +1689,101 @@ if(!passwordEncoder.matches(rawPassword, user.getPassword())) {
 ```
 the method loadUserByUsername, always return UserDetails as it is domain-agnostic, it doesn't care if this is a banking app or a gaming app etc., until it gets a UserDetails object the contract is maintained, hence if we create a custom user class then it should implement UserDetails and everything would be intact.
 
-58. 
+58. Form-Login authentication : A default stateful authentication method of spring-boot security, server maintains user auth state(http session). The session has a unique id known as JSESSIONID. Upon successful authentication, server returns JSESSIONID and then with each request this JSESSIONID is sent. The server can validate in its memory and if there exists a session object with JSESSIONID and is valid till current time(default 30 mins for tomcat), then only further processing happens, else redirection to login page happens. There are /login and /logout URLs provided by spring-boot for user input. We can store the session in DB so that we don't have to use sticky session for users. The timeout can be configured using
+```application.properties
+server.servlet.session.timeout=1m
+```
+After 1 min of total inactivity, the session will be invalidated. Assume the session was created at 12:00:00 and at 12:00:20, the user again requested for some resource, in this case the session will be now invalidated at 12:01:20 if there is again a continuous 1 min of inactivity. If we want to add sessions in DB we can configure pom.xml and application.properties as below
+```pom.xml
+<dependency>
+    <groupId>org.springframework.session<.groupId>
+    <artifactId>spring-session-jdbc</artifactId>
+</dependency>
+```
+```application.properties
+spring.session.store-type=jdbc
+spring.session.jdbc.initialize-schema=always <-- we are telling spring, it create a session table for application(spring_session) in which the expiry time keep on increasing if the activity continues
+server.servlet.session.timeout=5m
+```
+![Spring_Session](src/main/resources/images/spring-session.png)
+
+59. When a client tries to access a protected API, Spring Security detects that the request is unauthenticated and redirects the user to the /login page. The request is then intercepted by `UsernamePasswordAuthenticationFilter`. This filter extracts the username and password from the request and creates an unauthenticated `Authentication` object:
+`UsernamePasswordAuthenticationToken [Principal=user, credentials=[PROTECTED], Authenticated=false, Details=null, Granted Authorities=[]]`. This token is passed to the AuthenticationManager, which delegates the authentication process to an appropriate AuthenticationProvider. For username/password-based authentication, DaoAuthenticationProvider is typically used. The DaoAuthenticationProvider uses UserDetailsService to load user details (such as username, hashed password, roles, and account status) from the data source. It then validates the credentials using `PasswordEncoder.matches(rawPassword, storedHash)`, meaning the raw password provided by the user is compared against the already stored hashed password (no new password is stored during this process). If authentication is successful, a new authenticated Authentication object is created:
+`UsernamePasswordAuthenticationToken [Principal=org.springframework.security.core.userdetails.User, [Username=user, Password=[PROTECTED], Enabled=true, AccountNonExpired=true, AccountNonLocked=true, Granted Authorities=[ROLE_ADMIN]], Credentials=[PROTECTED], Authenticated=true, Details=WebAuthenticationDetails [RemoteIpAddress=0:0:0:0:0:0:0:1, SessionId=null], Granted Authorities=[ROLE_ADMIN]]`. This authenticated token is returned to the `UsernamePasswordAuthenticationFilter`, which then stores it in the SecurityContext via SecurityContextHolder (backed by a ThreadLocal for the current request). The request then continues through the filter chain and reaches the application. At the end of the request, SecurityContextHolderFilter ensures that the SecurityContext is saved using a SecurityContextRepository. By default, HttpSessionSecurityContextRepository is used, which stores the SecurityContext in the HTTP session (creating one only if required). This allows the authentication to persist across subsequent requests via the session (typically tracked using JSESSIONID).
+
+For subsequent requests :
+```text
+1. Client sends request with JSESSIONID cookie
+2. SecurityContextHolderFilter runs FIRST
+3. Loads SecurityContext from HttpSession
+4. Sets Authentication into ThreadLocal
+5. No need to login again, request proceed to authorization filter
+```
+Before /login and when the request reaches UsernamePasswordAuthenticationFilter below is the flow
+```text
+            Tomcat
+              ↓
+            DelegatingFilterProxy (This is a bridge between Tomcat and Spring Security)
+              ↓
+            FilterChainProxy (This is the real orchestrator, has many filters, decides which filter to run in what order)
+              ↓
+              ↓     if (request matches /login && method == POST) {
+              ↓         UsernamePasswordAuthenticationFilter.doFilter(...)
+              ↓     }
+              ↓
+            UsernamePasswordAuthenticationFilter (only for /login)
+```
+60. Full filter flow
+```text
+            Incoming Request
+                  ↓
+            1. WebAsyncManagerIntegrationFilter
+            2. SecurityContextHolderFilter
+            3. HeaderWriterFilter
+            4. CorsFilter (if enabled)
+            5. CsrfFilter
+            6. LogoutFilter
+            7. UsernamePasswordAuthenticationFilter   ← 
+            8. DefaultLoginPageGeneratingFilter (if no custom login)
+            9. BasicAuthenticationFilter (for HTTP Basic)
+            10. RequestCacheAwareFilter
+            11. SecurityContextHolderAwareRequestFilter
+            12. AnonymousAuthenticationFilter
+            13. ExceptionTranslationFilter
+            14. AuthorizationFilter
+                  ↓
+            DispatcherServlet (Spring MVC)
+```
+61. If we want to relax authentication on some apis(e.g. /register). If we want our custom /login and /logout page, we can customize that also. After authentication is done, we need to write manual code for authorization, it is not implemented by default.
+```java
+SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http){
+    http.authorizeHttpRequests((request)->
+                    request.requestMatchers("/register").permitAll()
+                            .requestMatchers("/users").hasRole("USER") // manually restricting end point
+                            .anyRequest().authenticated()
+    );
+    http.formLogin(withDefaults()); // here we can add our own custom login page
+    http.httpBasic(withDefaults());
+    return http.build();
+}
+```
+We can also restrict multiple login for same user by using sessionManagement with each request. Suppose we have built a web application for banks, and want that for a given time, only 1 session is active for the loggedIn user. Sessions are not created for public apis. We have a default configuration for sessions.
+```java
+@Bean
+SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http){
+    http.authorizeHttpRequests((request)->
+                    request.requestMatchers("/register").permitAll()
+                            .requestMatchers("/users").hasRole("ADMIN")
+                            .anyRequest().authenticated()
+            )
+            // Allow only 1 active session per user, and if a second login happens, reject it instead of kicking out the first session.
+            .sessionManagement(session ->
+                    session.maximumSessions(1)
+                            .maxSessionsPreventsLogin(true)
+            );
+    http.formLogin(withDefaults()); // here we can add our own custom login page
+    http.httpBasic(withDefaults());
+    return http.build();
+}
+```
+62. Disadvantages : Vulnerable to security issues like CSRF and Session hijacking. By default, CSRF is enabled for form based login, and we should not disable it. Session management is a big overhead and in case of distributed system it can lead to scalability issues. DB server load gets increased.

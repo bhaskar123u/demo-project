@@ -1,4 +1,4 @@
-package com.bsharan.demo_project.models;
+package com.bsharan.demo_project.model;
 
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.RootBeanDefinition;

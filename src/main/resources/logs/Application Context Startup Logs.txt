@@ -93,15 +93,15 @@
 2026-01-24T13:24:18.534+05:30  INFO 8353 --- [demo-project] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
 [BEAN INIT] demoProjectApplication -> com.bsharan.demo_project.DemoProjectApplication
 Order bean being created
-[BEAN INIT] order -> com.bsharan.demo_project.components.Order
+[BEAN INIT] order -> com.bsharan.demo_project.component.Order
 Order bean post construct called
 Product constructor called
-[BEAN INIT] product -> com.bsharan.demo_project.components.Product
+[BEAN INIT] product -> com.bsharan.demo_project.component.Product
 Product post construct is called
 User constructor called
-[BEAN INIT] user -> com.bsharan.demo_project.components.User
+[BEAN INIT] user -> com.bsharan.demo_project.component.User
 User bean post construct called
-Order object : com.bsharan.demo_project.components.Order
+Order object : com.bsharan.demo_project.component.Order
 [BEAN INIT] org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration -> org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration
 [BEAN INIT] org.springframework.boot.context.properties.EnableConfigurationPropertiesRegistrar.methodValidationExcludeFilter -> org.springframework.boot.validation.beanvalidation.MethodValidationExcludeFilter$$Lambda/0x00000070017a1d88
 [BEAN INIT] org.springframework.boot.webmvc.autoconfigure.DispatcherServletAutoConfiguration -> org.springframework.boot.webmvc.autoconfigure.DispatcherServletAutoConfiguration

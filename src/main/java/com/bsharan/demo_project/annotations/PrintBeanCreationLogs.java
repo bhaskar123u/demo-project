@@ -1,6 +1,6 @@
 package com.bsharan.demo_project.annotations;
 
-import com.bsharan.demo_project.models.PrintBeanCreationLogsRegistrar;
+import com.bsharan.demo_project.model.PrintBeanCreationLogsRegistrar;
 import org.springframework.context.annotation.Import;
 
 import java.lang.annotation.ElementType;

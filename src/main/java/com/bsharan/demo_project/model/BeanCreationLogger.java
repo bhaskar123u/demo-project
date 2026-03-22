@@ -1,4 +1,4 @@
-package com.bsharan.demo_project.models;
+package com.bsharan.demo_project.model;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
